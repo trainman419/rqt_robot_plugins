@@ -33,27 +33,41 @@
 # Author: Isaac Saito, Ze'ev Klapow
 
 from python_qt_binding.QtGui import QTextEdit
+from python_qt_binding.QtCore import Signal
 
-LEVEL_TO_TEXT = { 0: "OK", 1: "WARNING", 2: "ERROR", 3: "STALE" }
+from diagnostic_msgs.msg import DiagnosticStatus
+
+_LEVEL_TO_TEXT = { 0: "OK", 1: "WARNING", 2: "ERROR", 3: "STALE" }
+
+def level_to_text(level):
+    if level in _LEVEL_TO_TEXT:
+        return _LEVEL_TO_TEXT[level]
+    else:
+        return "UNKNOWN(%d)" % ( level )
 
 class StatusSnapshot(QTextEdit):
     """Display a single static status message. Helps facilitate copy/paste"""
+    sig_write = Signal(DiagnosticStatus)
 
     def __init__(self, status):
         super(StatusSnapshot, self).__init__()
 
+        self.sig_write.connect(self._write_status)
+        self.sig_write.emit(status)
+
+        self.resize(300, 400)
+        self.show()
+
+    def _write_status(self, status):
         self._write("Full Name", status.name)
         self._write("Component", status.name.split('/')[-1])
         self._write("Hardware ID", status.hardware_id)
-        self._write("Level", LEVEL_TO_TEXT[status.level])
+        self._write("Level", level_to_text(status.level))
         self._write("Message", status.message)
         self.insertPlainText('\n')
 
         for value in status.values:
             self._write(value.key, value.value)
-
-        self.resize(300, 400)
-        self.show()
 
     def _write(self, k, v):
         self.setFontWeight(75)
