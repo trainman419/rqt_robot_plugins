@@ -34,6 +34,7 @@
 
 from python_qt_binding.QtGui import QTextEdit
 
+LEVEL_TO_TEXT = { 0: "OK", 1: "WARNING", 2: "ERROR", 3: "STALE" }
 
 class StatusSnapshot(QTextEdit):
     """Display a single static status message. Helps facilitate copy/paste"""
@@ -44,7 +45,7 @@ class StatusSnapshot(QTextEdit):
         self._write("Full Name", status.name)
         self._write("Component", status.name.split('/')[-1])
         self._write("Hardware ID", status.hardware_id)
-        self._write("Level", status.level)
+        self._write("Level", LEVEL_TO_TEXT[status.level])
         self._write("Message", status.message)
         self.insertPlainText('\n')
 

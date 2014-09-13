@@ -37,7 +37,7 @@ from python_qt_binding.QtGui import QPushButton, QTextEdit, QVBoxLayout
 import rospy
 
 from rqt_robot_monitor.abst_status_widget import AbstractStatusWidget
-from rqt_robot_monitor.status_snapshot import StatusSnapshot
+from rqt_robot_monitor.status_snapshot import StatusSnapshot, LEVEL_TO_TEXT
 from rqt_robot_monitor.time_pane import TimelinePane
 from rqt_robot_monitor.util_robot_monitor import Util
 
@@ -150,7 +150,7 @@ class InspectorWindow(AbstractStatusWidget):
             self._sig_write.emit("Full Name", status.name)
             self._sig_write.emit("Component", status.name.split('/')[-1])
             self._sig_write.emit("Hardware ID", status.hardware_id)
-            self._sig_write.emit("Level", str(status.level))
+            self._sig_write.emit("Level", LEVEL_TO_TEXT[status.level])
             self._sig_write.emit("Message", status.message)
             self._sig_newline.emit()
 
