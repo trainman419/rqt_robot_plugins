@@ -36,10 +36,10 @@ from python_qt_binding.QtCore import Signal
 from python_qt_binding.QtGui import QPushButton, QTextEdit, QVBoxLayout
 import rospy
 
-from rqt_robot_monitor.abst_status_widget import AbstractStatusWidget
-from rqt_robot_monitor.status_snapshot import StatusSnapshot, level_to_text
-from rqt_robot_monitor.time_pane import TimelinePane
-from rqt_robot_monitor.util_robot_monitor import Util
+from .abst_status_widget import AbstractStatusWidget
+from .status_snapshot import StatusSnapshot, level_to_text
+from .time_pane import TimelinePane
+import util_robot_monitor as util
 
 
 class InspectorWindow(AbstractStatusWidget):
@@ -67,7 +67,7 @@ class InspectorWindow(AbstractStatusWidget):
         self.snapshot = QPushButton("StatusSnapshot")
 
         self.timeline_pane = TimelinePane(self)
-        self.timeline_pane.set_timeline_data(Util.SECONDS_TIMELINE,
+        self.timeline_pane.set_timeline_data(util.SECONDS_TIMELINE,
                                              self.get_color_for_value,
                                              self.on_pause)
 
@@ -106,6 +106,7 @@ class InspectorWindow(AbstractStatusWidget):
 
         :type status: DiagnosticsStatus
         """
+        raise Exception() # TODO(ahendrix): I think this is unused. prove it
 
         if not self.paused:
             self.update_status_display(msg)
@@ -152,4 +153,4 @@ class InspectorWindow(AbstractStatusWidget):
                        'queue_diagnostic=%d, color_index=%d',
                        len(queue_diagnostic), color_index)
         lv_index = queue_diagnostic[color_index - 1].level
-        return Util.COLOR_DICT[lv_index]
+        return util.COLOR_DICT[lv_index]

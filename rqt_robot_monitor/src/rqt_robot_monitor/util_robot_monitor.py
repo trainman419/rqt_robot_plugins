@@ -36,158 +36,144 @@ from diagnostic_msgs.msg import DiagnosticStatus
 from python_qt_binding.QtGui import QColor, QIcon
 import rospy
 
+# TODO: Utils and common configs are mixed in this class.
 
-class Util(object):
-    # TODO: Utils and common configs are mixed in this class.
+SECONDS_TIMELINE = 30
 
-    SECONDS_TIMELINE = 30
+# Instantiating icons that show the device status.
+_ERR_ICON = QIcon.fromTheme('dialog-error')
+_WARN_ICON = QIcon.fromTheme('dialog-warning')
+_OK_ICON = QIcon.fromTheme('emblem-default')
+# Added following this QA thread http://goo.gl/83tVZ
+_STALE_ICON = QIcon.fromTheme('dialog-question')
 
-    # Instantiating icons that show the device status.
-    _ERR_ICON = QIcon.fromTheme('dialog-error')
-    _WARN_ICON = QIcon.fromTheme('dialog-warning')
-    _OK_ICON = QIcon.fromTheme('emblem-default')
-    # Added following this QA thread http://goo.gl/83tVZ
-    _STALE_ICON = QIcon.fromTheme('dialog-question')
+IMG_DICT = {0: _OK_ICON, 1: _WARN_ICON, 2: _ERR_ICON, 3: _STALE_ICON}
 
-    IMG_DICT = {0: _OK_ICON, 1: _WARN_ICON, 2: _ERR_ICON, 3: _STALE_ICON}
+COLOR_DICT = {0: QColor(85, 178, 76),
+               1: QColor(222, 213, 17),
+               2: QColor(178, 23, 46),
+               3: QColor(40, 23, 176)
+               }
+# DiagnosticStatus dosn't have Stale status. Related QA:http://goo.gl/83tVZ
+# It's not ideal to add STALE to DiagnosticStatus as you see in that thread
+# but here this addition is only temporary for the purpose of
+# implementation simplicity.
+DiagnosticStatus.STALE = 3
 
-    COLOR_DICT = {0: QColor(85, 178, 76),
-                   1: QColor(222, 213, 17),
-                   2: QColor(178, 23, 46),
-                   3: QColor(40, 23, 176)
-                   }
-    # DiagnosticStatus dosn't have Stale status. Related QA:http://goo.gl/83tVZ
-    # It's not ideal to add STALE to DiagnosticStatus as you see in that thread
-    # but here this addition is only temporary for the purpose of
-    # implementation simplicity.
-    DiagnosticStatus.STALE = 3
+_DICTKEY_TIMES_ERROR = 'times_errors'
+_DICTKEY_TIMES_WARN = 'times_warnings'
+_DICTKEY_INDEX = 'index'
+_DICTKEY_STATITEM = 'statitem'
 
-    _DICTKEY_TIMES_ERROR = 'times_errors'
-    _DICTKEY_TIMES_WARN = 'times_warnings'
-    _DICTKEY_INDEX = 'index'
-    _DICTKEY_STATITEM = 'statitem'
+def update_status_images(diagnostic_status, statusitem):
+    """
+    Taken from robot_monitor.robot_monitor_panel.py.
 
-    def __init__(self):
-        super(Util, self).__init__()
+    :type status: DiagnosticStatus
+    :type node: StatusItem
+    :author: Isaac Saito
+    """
 
-    @staticmethod
-    def update_status_images(diagnostic_status, statusitem):
-        """
-        Taken from robot_monitor.robot_monitor_panel.py.
+    name = diagnostic_status.name
+    if (name is not None):
+        # level = diagnosis_status.level
+        level = diagnostic_status.level
+        if (diagnostic_status.level != statusitem.last_level):
+            #TODO: Apparently diagnosis_status doesn't contain last_level.
+            statusitem.setIcon(0, IMG_DICT[level])
+            statusitem.last_level = level
+            return
 
-        :type status: DiagnosticStatus
-        :type node: StatusItem
-        :author: Isaac Saito
-        """
+def get_grn_resource_name(status_name):
+    """
+    :param: status_name is a string that may consists of status names that
+            are delimited by slash.
+    :rtype: str
+    """
+    name = status_name.split('/')[-1]
+    rospy.logdebug(' get_grn_resource_name name = %s', name)
+    return name
 
-        name = diagnostic_status.name
-        if (name is not None):
-            # level = diagnosis_status.level
-            level = diagnostic_status.level
-            if (diagnostic_status.level != statusitem.last_level):
-                #TODO: Apparently diagnosis_status doesn't contain last_level.
-                statusitem.setIcon(0, Util.IMG_DICT[level])
-                statusitem.last_level = level
-                return
+def remove_parent_name(status_name):
+    return ('/'.join(status_name.split('/')[2:])).strip()
 
-    @staticmethod
-    def get_grn_resource_name(status_name):
-        """
-        :param: status_name is a string that may consists of status names that
-                are delimited by slash.
-        :rtype: str
-        """
-        name = status_name.split('/')[-1]
-        rospy.logdebug(' get_grn_resource_name name = %s', name)
-        return name
+def get_parent_name(status_name):
+    return ('/'.join(status_name.split('/')[:-1])).strip()
 
-    @staticmethod
-    def remove_parent_name(status_name):
-        return ('/'.join(status_name.split('/')[2:])).strip()
+def gen_headline_status_green(diagnostic_status):
+    return "%s" % get_grn_resource_name(diagnostic_status.name)
 
-    @staticmethod
-    def get_parent_name(status_name):
-        return ('/'.join(status_name.split('/')[:-1])).strip()
+def gen_headline_warn_or_err(diagnostic_status):
+    return "%s : %s" % (get_grn_resource_name(diagnostic_status.name),
+                        diagnostic_status.message)
 
-    @staticmethod
-    def gen_headline_status_green(diagnostic_status):
-        return "%s" % Util.get_grn_resource_name(diagnostic_status.name)
+def _get_color_for_message(msg, mode=0):
+    """
+    :param msg: Either DiagnosticArray or DiagnosticsStatus.
+    :param mode: int. When 0, this func will iterate msg to find
+                 DiagnosticsStatus.level and put it into a dict.
+                 When 1, this func finds DiagnosticsStatus.level from msg
+                 without iteration (thus, msg is expected to be
+                 DiagnosticsStatus instance).
+    """
 
-    @staticmethod
-    def gen_headline_warn_or_err(diagnostic_status):
-        return "%s : %s" % (Util.get_grn_resource_name(diagnostic_status.name),
-                            diagnostic_status.message)
+    level = 0
+    min_level = 255
 
-    @staticmethod
-    def _get_color_for_message(msg, mode=0):
-        """
-        :param msg: Either DiagnosticArray or DiagnosticsStatus.
-        :param mode: int. When 0, this func will iterate msg to find
-                     DiagnosticsStatus.level and put it into a dict.
-                     When 1, this func finds DiagnosticsStatus.level from msg
-                     without iteration (thus, msg is expected to be
-                     DiagnosticsStatus instance).
-        """
+    lookup = {}
+    for status in msg.status:
+        lookup[status.name] = status
 
-        level = 0
-        min_level = 255
+    names = [status.name for status in msg.status]
+    names = [name for name in names
+             if len(get_parent_name(name)) == 0]
+    for name in names:
+        status = lookup[name]
+        if (status.level > level):
+            level = status.level
+        if (status.level < min_level):
+            min_level = status.level
 
-        lookup = {}
-        for status in msg.status:
-            lookup[status.name] = status
+    # Stale items should be reported as errors unless all stale
+    if (level > 2 and min_level <= 2):
+        level = 2
 
-        names = [status.name for status in msg.status]
-        names = [name for name in names
-                 if len(Util.get_parent_name(name)) == 0]
-        for name in names:
-            status = lookup[name]
-            if (status.level > level):
-                level = status.level
-            if (status.level < min_level):
-                min_level = status.level
+    # return IMG_DICT[level]
+    rospy.logdebug(' get_color_for_message color lv=%d', level)
+    return COLOR_DICT[level]
 
-        # Stale items should be reported as errors unless all stale
-        if (level > 2 and min_level <= 2):
-            level = 2
+def get_correspondent(key, list_statitem):
+    """
 
-        # return Util.IMG_DICT[level]
-        rospy.logdebug(' get_color_for_message color lv=%d', level)
-        return Util.COLOR_DICT[level]
+    :type key: String.
+    :type list_statitem: DiagnosticsStatus
+    :rtype: StatusItem
+    """
+    names_from_list = [get_grn_resource_name(status.name)
+                       for status in list_statitem]
+    key_niced = get_grn_resource_name(key)
+    index_key = -1
+    statitem_key = None
+    if key_niced in names_from_list:
+        index_key = names_from_list.index(key_niced)
+        statitem_key = list_statitem[index_key]
+        rospy.logdebug(' get_correspondent index_key=%s statitem_key=%s',
+                      index_key, statitem_key)
+    return {_DICTKEY_INDEX: index_key,
+            _DICTKEY_STATITEM: statitem_key}
 
-    @staticmethod
-    def get_correspondent(key, list_statitem):
-        """
+def get_children(name, diag_array):
+    """
 
-        :type key: String.
-        :type list_statitem: DiagnosticsStatus
-        :rtype: StatusItem
-        """
-        names_from_list = [Util.get_grn_resource_name(status.name)
-                           for status in list_statitem]
-        key_niced = Util.get_grn_resource_name(key)
-        index_key = -1
-        statitem_key = None
-        if key_niced in names_from_list:
-            index_key = names_from_list.index(key_niced)
-            statitem_key = list_statitem[index_key]
-            rospy.logdebug(' get_correspondent index_key=%s statitem_key=%s',
-                          index_key, statitem_key)
-        return {Util._DICTKEY_INDEX: index_key,
-                Util._DICTKEY_STATITEM: statitem_key}
+    :type msg: DiagnosticArray
+    :rtype: DiagnosticStatus[]
+    """
 
-    @staticmethod
-    def get_children(name, diag_array):
-        """
-
-        :type msg: DiagnosticArray
-        :rtype: DiagnosticStatus[]
-        """
-
-        ret = []
-        for k in diag_array.status:  # k is DiagnosticStatus.
-            if k.name.startswith(name):  # Starting with self.name means k
-                                        # is either top/parent node / its child
-                if not k.name == name:  # Child's name must be different
-                                            # from that of the top/parent node.
-                    ret.append(k)
-        return ret
+    ret = []
+    for k in diag_array.status:  # k is DiagnosticStatus.
+        if k.name.startswith(name):  # Starting with self.name means k
+                                    # is either top/parent node / its child
+            if not k.name == name:  # Child's name must be different
+                                        # from that of the top/parent node.
+                ret.append(k)
+    return ret

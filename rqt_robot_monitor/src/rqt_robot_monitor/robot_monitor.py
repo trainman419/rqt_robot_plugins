@@ -44,7 +44,7 @@ import rospy
 from .abst_status_widget import AbstractStatusWidget
 from .chronologic_state import InstantaneousState, StatusItem
 from .time_pane import TimelinePane
-from .util_robot_monitor import Util
+import util_robot_monitor as util
 
 
 class RobotMonitorWidget(AbstractStatusWidget):
@@ -87,7 +87,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
         # TODO: Declaring timeline pane.
         #      Needs to be stashed away into .ui file but so far failed.
-        self.timeline_pane.set_timeline_data(Util.SECONDS_TIMELINE,
+        self.timeline_pane.set_timeline_data(util.SECONDS_TIMELINE,
                                              self.get_color_for_value,
                                              self.on_pause)
 
@@ -168,9 +168,9 @@ class RobotMonitorWidget(AbstractStatusWidget):
         """
 
         for statitem_new in diag_arr.status:
-            corresp = Util.get_correspondent(statitem_new.name,
+            corresp = util.get_correspondent(statitem_new.name,
                                              self._toplevel_statitems)
-            statitem_prev = corresp[Util._DICTKEY_STATITEM]
+            statitem_prev = corresp[util._DICTKEY_STATITEM]
             if statitem_prev and statitem_prev.inspector:
                 rospy.logdebug('  RobotMonitorWidget _notify_statitems ' +
                                'name=%s len toplv items=%d',
@@ -202,13 +202,13 @@ class RobotMonitorWidget(AbstractStatusWidget):
         #            while running this program, there's no way to remove
         #            those from the device-tree.
 
-        statusnames_curr_toplevel = [Util.get_grn_resource_name(status.name)
+        statusnames_curr_toplevel = [util.get_grn_resource_name(status.name)
                                      for status in self._toplevel_statitems]
         # Only the status variable that pops up at the end is
-        # processed by Util.get_grn_resource_name.
+        # processed by util.get_grn_resource_name.
 
         for status_new in self._get_toplevel_diagnosticstat(diag_array):
-            name = Util.get_grn_resource_name(status_new.name)
+            name = util.get_grn_resource_name(status_new.name)
             rospy.logdebug('_update_devices_tree 0 name @ toplevel %s', name)
             dict_status = 0
             if name in statusnames_curr_toplevel:  # No change of names
@@ -218,12 +218,12 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
                 dict_status = statusitem.update_children(status_new,
                                                          diag_array)
-                times_errors = dict_status[Util._DICTKEY_TIMES_ERROR]
-                times_warnings = dict_status[Util._DICTKEY_TIMES_WARN]
-                Util.update_status_images(status_new, statusitem)
+                times_errors = dict_status[util._DICTKEY_TIMES_ERROR]
+                times_warnings = dict_status[util._DICTKEY_TIMES_WARN]
+                util.update_status_images(status_new, statusitem)
 
                 # TODO: Update status text on each node using dict_status.
-                base_text = Util.gen_headline_status_green(statusitem.status)
+                base_text = util.gen_headline_status_green(statusitem.status)
 
                 rospy.logdebug('_update_devices_tree warn_id= %s\n\t\t\t' +
                                'diagnostic_status.name = %s\n\t\t\t\t' +
@@ -235,7 +235,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
                     base_text = "(Err: %s, Wrn: %s) %s %s" % (
                                    times_errors,
                                    times_warnings,
-                                   Util.get_grn_resource_name(status_new.name),
+                                   util.get_grn_resource_name(status_new.name),
                                    status_new.message)
                     rospy.logdebug('_update_dev_tree 1 text to show=%s',
                                    base_text)
@@ -256,7 +256,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
                 # Figure out if a statusitem and its subtree contains errors.
                 # new_status_item.setIcon(0, self._error_icon)
                 # This shows NG icon at the beginning of each statusitem.
-                Util.update_status_images(status_new,
+                util.update_status_images(status_new,
                                            new_status_item)
 
                 self._toplevel_statitems.append(new_status_item)
@@ -380,16 +380,16 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
             stat_lv_new = diag_stat_new.level
             dev_name = diag_stat_new.name
-            correspondent_warn_curr = Util.get_correspondent(
-                                         Util.get_grn_resource_name(dev_name),
+            correspondent_warn_curr = util.get_correspondent(
+                                         util.get_grn_resource_name(dev_name),
                                          self._warn_statusitems)
-            dev_index_warn_curr = correspondent_warn_curr[Util._DICTKEY_INDEX]
+            dev_index_warn_curr = correspondent_warn_curr[util._DICTKEY_INDEX]
             rospy.logdebug(' dev_index_warn_curr=%s dev_name=%s',
                            dev_index_warn_curr, dev_name)
-            correspondent_err_curr = Util.get_correspondent(
-                                          Util.get_grn_resource_name(dev_name),
+            correspondent_err_curr = util.get_correspondent(
+                                          util.get_grn_resource_name(dev_name),
                                           self._err_statusitems)
-            dev_index_err_curr = correspondent_err_curr[Util._DICTKEY_INDEX]
+            dev_index_err_curr = correspondent_err_curr[util._DICTKEY_INDEX]
             headline = "%s" % diag_stat_new.name
             if DiagnosticStatus.OK == stat_lv_new:
                 if 0 <= dev_index_warn_curr:
@@ -475,7 +475,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
         statusitem.setText(0, headline)
         statusitem.setText(1, statusmsg)
-        statusitem.setIcon(0, Util.IMG_DICT[statlevel])
+        statusitem.setIcon(0, util.IMG_DICT[statlevel])
         statitem_list.append(statusitem)
         tree.addTopLevelItem(statusitem)
         rospy.logdebug(' _add_statitem statitem_list length=%d',
@@ -587,6 +587,6 @@ class RobotMonitorWidget(AbstractStatusWidget):
         if (color_index == 1 and len_q == 0):
             # TODO: Needs to be reverted back
             return QColor('grey')
-        return Util._get_color_for_message(queue_diagnostic[color_index - 1])
+        return util._get_color_for_message(queue_diagnostic[color_index - 1])
         # When _queue_diagnostic is empty,
         # this yield error when color_index > 0.

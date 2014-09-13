@@ -37,7 +37,7 @@ from python_qt_binding.QtGui import QTreeWidgetItem
 import rospy
 
 from .inspector_window import InspectorWindow
-from .util_robot_monitor import Util
+import util_robot_monitor as util
 
 
 class StatusItem(QTreeWidgetItem):
@@ -62,7 +62,7 @@ class StatusItem(QTreeWidgetItem):
         self.warning_id = None
         self.error_id = None
 
-        self.setText(0, '/' + Util.get_grn_resource_name(self.name))
+        self.setText(0, '/' + util.get_grn_resource_name(self.name))
 
     def get_name(self):
         return self.name
@@ -98,23 +98,23 @@ class StatusItem(QTreeWidgetItem):
         if self.inspector:
             self.inspector.update_status_display(self.status)
 
-        children_diag_statuses = Util.get_children(self.name, diag_array)
+        children_diag_statuses = util.get_children(self.name, diag_array)
 
         names_toplevel_local = [s.name for s in self._children_statusitems]
         errors = 0
         warnings = 0
         for child_diagnostic_status in children_diag_statuses:
             name = child_diagnostic_status.name
-            device_name = Util.get_grn_resource_name(
+            device_name = util.get_grn_resource_name(
                                                   child_diagnostic_status.name)
             if (child_diagnostic_status.level != DiagnosticStatus.OK):
-                Util.gen_headline_warn_or_err(child_diagnostic_status)
+                util.gen_headline_warn_or_err(child_diagnostic_status)
                 if (child_diagnostic_status.level == DiagnosticStatus.ERROR):
                     errors = errors + 1
                 elif (child_diagnostic_status.level == DiagnosticStatus.WARN):
                     warnings = warnings + 1
             else:
-                Util.gen_headline_status_green(child_diagnostic_status)
+                util.gen_headline_status_green(child_diagnostic_status)
             rospy.logdebug(' update_children level= %s',
                            child_diagnostic_status.level)
 
@@ -124,7 +124,7 @@ class StatusItem(QTreeWidgetItem):
                 # Recursive call.
                 status_item.update_children(
                                            child_diagnostic_status, diag_array)
-                Util.update_status_images(child_diagnostic_status, status_item)
+                util.update_status_images(child_diagnostic_status, status_item)
                 rospy.logdebug(' StatusItem update 33 index= %d dev_name= %s',
                                index_child, device_name)
                 status_item.setText(0, device_name)
@@ -141,8 +141,8 @@ class StatusItem(QTreeWidgetItem):
 
         rospy.logdebug(' ------ Statusitem.update_children err=%d warn=%d',
                        errors, warnings)
-        return {Util._DICTKEY_TIMES_ERROR: errors,
-                Util._DICTKEY_TIMES_WARN: warnings}
+        return {util._DICTKEY_TIMES_ERROR: errors,
+                util._DICTKEY_TIMES_WARN: warnings}
 
     def on_click(self):
         if not self.inspector:
@@ -242,7 +242,7 @@ class InstantaneousState(object):
         for i in items.itervalues():
             parent = i.status.name
             while (len(parent) != 0):
-                parent = Util.get_parent_name(parent)
+                parent = util.get_parent_name(parent)
                 if (len(parent) > 0 and
                     (parent not in items) and
                     parent not in dummy_names):
