@@ -108,8 +108,7 @@ class StatusItem(QTreeWidgetItem):
             device_name = Util.get_grn_resource_name(
                                                   child_diagnostic_status.name)
             if (child_diagnostic_status.level != DiagnosticStatus.OK):
-                Util.gen_headline_warn_or_err(
-                                                       child_diagnostic_status)
+                Util.gen_headline_warn_or_err(child_diagnostic_status)
                 if (child_diagnostic_status.level == DiagnosticStatus.ERROR):
                     errors = errors + 1
                 elif (child_diagnostic_status.level == DiagnosticStatus.WARN):
