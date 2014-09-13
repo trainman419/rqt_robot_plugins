@@ -62,7 +62,7 @@ class StatusItem(QTreeWidgetItem):
         self.warning_id = None
         self.error_id = None
 
-        self.setText(0, '/' + util.get_grn_resource_name(self.name))
+        self.setText(0, '/' + util.get_resource_name(self.name))
 
     def get_name(self):
         return self.name
@@ -105,16 +105,11 @@ class StatusItem(QTreeWidgetItem):
         warnings = 0
         for child_diagnostic_status in children_diag_statuses:
             name = child_diagnostic_status.name
-            device_name = util.get_grn_resource_name(
-                                                  child_diagnostic_status.name)
-            if (child_diagnostic_status.level != DiagnosticStatus.OK):
-                util.gen_headline_warn_or_err(child_diagnostic_status)
-                if (child_diagnostic_status.level == DiagnosticStatus.ERROR):
-                    errors = errors + 1
-                elif (child_diagnostic_status.level == DiagnosticStatus.WARN):
-                    warnings = warnings + 1
-            else:
-                util.gen_headline_status_green(child_diagnostic_status)
+            device_name = util.get_resource_name(child_diagnostic_status.name)
+            if (child_diagnostic_status.level == DiagnosticStatus.ERROR):
+                errors = errors + 1
+            elif (child_diagnostic_status.level == DiagnosticStatus.WARN):
+                warnings = warnings + 1
             rospy.logdebug(' update_children level= %s',
                            child_diagnostic_status.level)
 

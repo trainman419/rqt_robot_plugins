@@ -84,14 +84,16 @@ def update_status_images(diagnostic_status, statusitem):
             statusitem.last_level = level
             return
 
-def get_grn_resource_name(status_name):
+def get_resource_name(status_name):
     """
+    Get resource name from path
+
     :param: status_name is a string that may consists of status names that
             are delimited by slash.
     :rtype: str
     """
     name = status_name.split('/')[-1]
-    rospy.logdebug(' get_grn_resource_name name = %s', name)
+    rospy.logdebug(' get_resource_name name = %s', name)
     return name
 
 def remove_parent_name(status_name):
@@ -100,11 +102,18 @@ def remove_parent_name(status_name):
 def get_parent_name(status_name):
     return ('/'.join(status_name.split('/')[:-1])).strip()
 
+def gen_headline(diagnostic_status):
+    resource = get_resource_name(diagnostic_status.name)
+    if diagnostic_status == DiagnosticStatus.OK:
+        return "%s" % resource
+    else:
+        return "%s : %s" % ( resource, diagnostic_status.message )
+
 def gen_headline_status_green(diagnostic_status):
-    return "%s" % get_grn_resource_name(diagnostic_status.name)
+    return "%s" % get_resource_name(diagnostic_status.name)
 
 def gen_headline_warn_or_err(diagnostic_status):
-    return "%s : %s" % (get_grn_resource_name(diagnostic_status.name),
+    return "%s : %s" % (get_resource_name(diagnostic_status.name),
                         diagnostic_status.message)
 
 def _get_color_for_message(msg, mode=0):
@@ -149,9 +158,9 @@ def get_correspondent(key, list_statitem):
     :type list_statitem: DiagnosticsStatus
     :rtype: StatusItem
     """
-    names_from_list = [get_grn_resource_name(status.name)
+    names_from_list = [get_resource_name(status.name)
                        for status in list_statitem]
-    key_niced = get_grn_resource_name(key)
+    key_niced = get_resource_name(key)
     index_key = -1
     statitem_key = None
     if key_niced in names_from_list:

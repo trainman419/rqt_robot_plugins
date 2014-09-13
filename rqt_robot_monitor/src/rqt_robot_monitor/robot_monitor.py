@@ -202,13 +202,13 @@ class RobotMonitorWidget(AbstractStatusWidget):
         #            while running this program, there's no way to remove
         #            those from the device-tree.
 
-        statusnames_curr_toplevel = [util.get_grn_resource_name(status.name)
+        statusnames_curr_toplevel = [util.get_resource_name(status.name)
                                      for status in self._toplevel_statitems]
         # Only the status variable that pops up at the end is
-        # processed by util.get_grn_resource_name.
+        # processed by util.get_resource_name.
 
         for status_new in self._get_toplevel_diagnosticstat(diag_array):
-            name = util.get_grn_resource_name(status_new.name)
+            name = util.get_resource_name(status_new.name)
             rospy.logdebug('_update_devices_tree 0 name @ toplevel %s', name)
             dict_status = 0
             if name in statusnames_curr_toplevel:  # No change of names
@@ -223,7 +223,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
                 util.update_status_images(status_new, statusitem)
 
                 # TODO: Update status text on each node using dict_status.
-                base_text = util.gen_headline_status_green(statusitem.status)
+                base_text = util.gen_headline(statusitem.status)
 
                 rospy.logdebug('_update_devices_tree warn_id= %s\n\t\t\t' +
                                'diagnostic_status.name = %s\n\t\t\t\t' +
@@ -235,7 +235,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
                     base_text = "(Err: %s, Wrn: %s) %s %s" % (
                                    times_errors,
                                    times_warnings,
-                                   util.get_grn_resource_name(status_new.name),
+                                   util.get_resource_name(status_new.name),
                                    status_new.message)
                     rospy.logdebug('_update_dev_tree 1 text to show=%s',
                                    base_text)
@@ -381,13 +381,13 @@ class RobotMonitorWidget(AbstractStatusWidget):
             stat_lv_new = diag_stat_new.level
             dev_name = diag_stat_new.name
             correspondent_warn_curr = util.get_correspondent(
-                                         util.get_grn_resource_name(dev_name),
+                                         util.get_resource_name(dev_name),
                                          self._warn_statusitems)
             dev_index_warn_curr = correspondent_warn_curr[util._DICTKEY_INDEX]
             rospy.logdebug(' dev_index_warn_curr=%s dev_name=%s',
                            dev_index_warn_curr, dev_name)
             correspondent_err_curr = util.get_correspondent(
-                                          util.get_grn_resource_name(dev_name),
+                                          util.get_resource_name(dev_name),
                                           self._err_statusitems)
             dev_index_err_curr = correspondent_err_curr[util._DICTKEY_INDEX]
             headline = "%s" % diag_stat_new.name
