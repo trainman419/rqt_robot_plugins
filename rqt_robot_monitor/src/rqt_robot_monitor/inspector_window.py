@@ -88,7 +88,7 @@ class InspectorWindow(AbstractStatusWidget):
 
         self.setLayout(self.layout_vertical)
         # TODO better to be configurable where to appear.
-        self.setGeometry(0, 0, 400, 600)
+        self.resize(400, 600)
         self.show()
         self.update_status_display(status)
 

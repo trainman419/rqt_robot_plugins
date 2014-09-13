@@ -52,7 +52,7 @@ class StatusSnapshot(QTextEdit):
         for value in status.values:
             self._write(value.key, value.value)
 
-        self.setGeometry(0, 0, 300, 400)
+        self.resize(300, 400)
         self.show()
 
     def _write(self, k, v):
