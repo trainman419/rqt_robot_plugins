@@ -88,6 +88,8 @@ class InspectorWindow(AbstractStatusWidget):
 
     def closeEvent(self, event):
         # emit signal that should be slotted by StatusItem
+        for snap in self.snaps:
+            snap.close()
         self._sig_close_window.emit()
         self.close()
 
