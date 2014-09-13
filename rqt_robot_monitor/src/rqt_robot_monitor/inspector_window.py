@@ -43,10 +43,7 @@ from rqt_robot_monitor.util_robot_monitor import Util
 
 
 class InspectorWindow(AbstractStatusWidget):
-    _sig_write = Signal(str, str)
-    _sig_newline = Signal()
     _sig_close_window = Signal()
-    _sig_clear = Signal()
 
     def __init__(self, status, close_callback):
         """
@@ -66,7 +63,7 @@ class InspectorWindow(AbstractStatusWidget):
 
         self.layout_vertical = QVBoxLayout(self)
 
-        self.disp = QTextEdit(self)
+        self.disp = StatusSnapshot(parent=self)
         self.snapshot = QPushButton("StatusSnapshot")
 
         self.timeline_pane = TimelinePane(self)
@@ -81,9 +78,6 @@ class InspectorWindow(AbstractStatusWidget):
         self.snaps = []
         self.snapshot.clicked.connect(self._take_snapshot)
 
-        self._sig_write.connect(self._write_key_val)
-        self._sig_newline.connect(lambda: self.disp.insertPlainText('\n'))
-        self._sig_clear.connect(lambda: self.disp.clear())
         self._sig_close_window.connect(self._close_callback)
 
         self.setLayout(self.layout_vertical)
@@ -96,15 +90,6 @@ class InspectorWindow(AbstractStatusWidget):
         # emit signal that should be slotted by StatusItem
         self._sig_close_window.emit()
         self.close()
-
-    def _write_key_val(self, k, v):
-        self.disp.setFontWeight(75)
-        self.disp.insertPlainText(k)
-        self.disp.insertPlainText(': ')
-
-        self.disp.setFontWeight(50)
-        self.disp.insertPlainText(v)
-        self.disp.insertPlainText('\n')
 
     def pause(self, msg):
         rospy.logdebug('InspectorWin pause PAUSED')
@@ -146,22 +131,14 @@ class InspectorWindow(AbstractStatusWidget):
             rospy.logdebug('InspectorWin update_status_display 1')
 
             self.status = status
-            self._sig_clear.emit()
-            self._sig_write.emit("Full Name", status.name)
-            self._sig_write.emit("Component", status.name.split('/')[-1])
-            self._sig_write.emit("Hardware ID", status.hardware_id)
-            self._sig_write.emit("Level", level_to_text(status.level))
-            self._sig_write.emit("Message", status.message)
-            self._sig_newline.emit()
+            self.disp.write_status.emit(status)
 
-            for v in status.values:
-                self._sig_write.emit(v.key, v.value)
             if self.disp.verticalScrollBar().maximum() < scroll_value:
                 scroll_value = self.disp.verticalScrollBar().maximum()
             self.disp.verticalScrollBar().setValue(scroll_value)
 
     def _take_snapshot(self):
-        snap = StatusSnapshot(self.status)
+        snap = StatusSnapshot(status=self.status)
         self.snaps.append(snap)
 
     def get_color_for_value(self, queue_diagnostic, color_index):

@@ -47,18 +47,20 @@ def level_to_text(level):
 
 class StatusSnapshot(QTextEdit):
     """Display a single static status message. Helps facilitate copy/paste"""
-    sig_write = Signal(DiagnosticStatus)
+    write_status = Signal(DiagnosticStatus)
 
-    def __init__(self, status):
+    def __init__(self, status=None, parent=None):
         super(StatusSnapshot, self).__init__()
 
-        self.sig_write.connect(self._write_status)
-        self.sig_write.emit(status)
+        self.write_status.connect(self._write_status)
+        if status is not None:
+            self.write_status.emit(status)
 
-        self.resize(300, 400)
-        self.show()
+            self.resize(300, 400)
+            self.show()
 
     def _write_status(self, status):
+        self.clear()
         self._write("Full Name", status.name)
         self._write("Component", status.name.split('/')[-1])
         self._write("Hardware ID", status.hardware_id)
