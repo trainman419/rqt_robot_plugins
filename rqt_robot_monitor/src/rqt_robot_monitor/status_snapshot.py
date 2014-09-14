@@ -30,7 +30,11 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Author: Isaac Saito, Ze'ev Klapow
+# Author: Isaac Saito, Ze'ev Klapow, Austin Hendrix
+#
+# TODO(ahendrix):
+#   re-use this class in runtime monitor
+#   better formatting of key-value pairs in a table
 
 from python_qt_binding.QtGui import QTextEdit
 from python_qt_binding.QtCore import Signal
