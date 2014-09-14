@@ -76,10 +76,8 @@ def update_status_images(diagnostic_status, statusitem):
 
     name = diagnostic_status.name
     if (name is not None):
-        # level = diagnosis_status.level
         level = diagnostic_status.level
         if (diagnostic_status.level != statusitem.last_level):
-            #TODO: Apparently diagnosis_status doesn't contain last_level.
             statusitem.setIcon(0, IMG_DICT[level])
             statusitem.last_level = level
             return
@@ -101,20 +99,6 @@ def remove_parent_name(status_name):
 
 def get_parent_name(status_name):
     return ('/'.join(status_name.split('/')[:-1])).strip()
-
-def gen_headline(diagnostic_status):
-    resource = get_resource_name(diagnostic_status.name)
-    if diagnostic_status == DiagnosticStatus.OK:
-        return "%s" % resource
-    else:
-        return "%s : %s" % ( resource, diagnostic_status.message )
-
-def gen_headline_status_green(diagnostic_status):
-    return "%s" % get_resource_name(diagnostic_status.name)
-
-def gen_headline_warn_or_err(diagnostic_status):
-    return "%s : %s" % (get_resource_name(diagnostic_status.name),
-                        diagnostic_status.message)
 
 def _get_color_for_message(msg, mode=0):
     """

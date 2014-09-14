@@ -222,8 +222,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
                 times_warnings = dict_status[util._DICTKEY_TIMES_WARN]
                 util.update_status_images(status_new, statusitem)
 
-                # TODO: Update status text on each node using dict_status.
-                base_text = util.gen_headline(statusitem.status)
+                base_text = util.get_resource_name(statusitem.status.name)
 
                 rospy.logdebug('_update_devices_tree warn_id= %s\n\t\t\t' +
                                'diagnostic_status.name = %s\n\t\t\t\t' +
