@@ -64,7 +64,7 @@ class InspectorWindow(AbstractStatusWidget):
         self.layout_vertical = QVBoxLayout(self)
 
         self.disp = StatusSnapshot(parent=self)
-        self.snapshot = QPushButton("StatusSnapshot")
+        self.snapshot = QPushButton("Snapshot")
 
         self.timeline_pane = TimelinePane(self)
         self.timeline_pane.set_timeline_data(self.get_color_for_value,
