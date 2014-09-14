@@ -38,8 +38,6 @@ import rospy
 
 # TODO: Utils and common configs are mixed in this class.
 
-SECONDS_TIMELINE = 30
-
 # Instantiating icons that show the device status.
 _ERR_ICON = QIcon.fromTheme('dialog-error')
 _WARN_ICON = QIcon.fromTheme('dialog-warning')

@@ -31,6 +31,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 # Author: Isaac Saito, Ze'ev Klapow
+#
+# TODO:
+#   this needs to change pretty considerably
+#
+#   right now, each instance maintains its own history. this means that
+#   each inspector window starts with zero history
+#
+#   the history should instead be global, and each timeline should have
+#   it's own view of the history. I believe this is how the old rx version
+#   worked
 
 from collections import deque
 from math import floor
@@ -44,6 +54,7 @@ import rospkg
 
 from .timeline import TimelineView
 
+SECONDS_TIMELINE = 30
 
 class TimelinePane(QWidget):
     """
@@ -59,43 +70,44 @@ class TimelinePane(QWidget):
         taking argument other than parent widget is not possible, which is
         ported to set_timeline_data method. That said, set_timeline_data must
         be called (soon) after an object of this is instantiated.
-
-        :param color_callback: Not directly used within this class. Instead,
-        this will be passed and used in TimelineView class.
         """
-        #TODO(Isaac) pause_callback is MUST since it's used in both by
-        #            RobotMonitorWidget & InspectorWindow.
-
         super(TimelinePane, self).__init__()
         self._parent = parent
 
-    def set_timeline_data(self, len_timeline=None,
-                 color_callback=None,
-                 pause_callback=None):
-        if len_timeline:
-            rp = rospkg.RosPack()
-            ui_file = os.path.join(rp.get_path('rqt_robot_monitor'),
-                                   'resource',
-                                   'timelinepane.ui')
-            loadUi(ui_file, self, {'TimelineView': TimelineView})
+    def set_timeline_data(self, color_callback, pause_callback):
+        #TODO(Isaac) pause_callback is MUST since it's used in both by
+        #            RobotMonitorWidget & InspectorWindow.
+        # TODO(ahendrix): should pause_callback be a signal?
+        # TODO(ahendrix): pause_callback is never called
+        # TODO(ahendrix): should color_callback be a signal?
+        """
+        :param color_callback: Not directly used within this class. Instead,
+        this will be passed and used in TimelineView class.
+        :param pause_callback: Called when the callback is paused
+        """
+        rp = rospkg.RosPack()
+        ui_file = os.path.join(rp.get_path('rqt_robot_monitor'),
+                               'resource',
+                               'timelinepane.ui')
+        loadUi(ui_file, self, {'TimelineView': TimelineView})
 
-            self._pause_callback = pause_callback
-            self._timeline_view.set_init_data(1, len_timeline, 5,
-                                              color_callback)
+        self._pause_callback = pause_callback
+        self._timeline_view.set_init_data(1, SECONDS_TIMELINE, 5,
+                                          color_callback)
 
-            self._scene = QGraphicsScene(self._timeline_view)
-            self._timeline_view.setScene(self._scene)
-            self._timeline_view.show()
+        self._scene = QGraphicsScene(self._timeline_view)
+        self._timeline_view.setScene(self._scene)
+        self._timeline_view.show()
 
-            self._queue_diagnostic = deque()
-            self._len_timeline = len_timeline
-            self._paused = False
-            self._tracking_latest = True
-            self._last_sec_marker_at = 2
-            self._last_msg = None
+        self._queue_diagnostic = deque()
+        self._len_timeline = SECONDS_TIMELINE
+        self._paused = False
+        self._tracking_latest = True
+        self._last_sec_marker_at = 2
+        self._last_msg = None
 
-            self._pause_button.clicked[bool].connect(self._pause)
-            self.sig_update.connect(self._timeline_view.slot_redraw)
+        self._pause_button.clicked[bool].connect(self._pause)
+        self.sig_update.connect(self._timeline_view.slot_redraw)
 
     def mouse_release(self, event):
         """
@@ -157,10 +169,10 @@ class TimelinePane(QWidget):
         xpos_marker = self._timeline_view.get_xpos_marker() - 1
         rospy.logdebug('on_slider_scroll xpos_marker=%s last_sec_marker_at=%s',
                       xpos_marker, self._last_sec_marker_at)
-        if (xpos_marker == self._last_sec_marker_at):
+        if xpos_marker == self._last_sec_marker_at:
             # Clicked the same pos as last time.
             return
-        elif (xpos_marker >= len(self._queue_diagnostic)):
+        elif xpos_marker >= len(self._queue_diagnostic):
             # When clicked out-of-region
             return
 
@@ -193,11 +205,11 @@ class TimelinePane(QWidget):
         # # This is done here in robot_monitor.
         # # In rqt_robot_monitor, however, it's done in RobotMonitorWidget.
 
-        if (self._paused):
+        if self._paused:
             return
 
         self._queue_diagnostic.append(msg)
-        if (len(self._queue_diagnostic) > self._len_timeline):
+        if len(self._queue_diagnostic) > self._len_timeline:
             # Remove the msg in the record, which is older than the specified
             # time.
             self._queue_diagnostic.popleft()

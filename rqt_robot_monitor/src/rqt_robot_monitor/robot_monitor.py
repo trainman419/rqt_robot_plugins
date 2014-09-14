@@ -87,8 +87,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
         # TODO: Declaring timeline pane.
         #      Needs to be stashed away into .ui file but so far failed.
-        self.timeline_pane.set_timeline_data(util.SECONDS_TIMELINE,
-                                             self.get_color_for_value,
+        self.timeline_pane.set_timeline_data(self.get_color_for_value,
                                              self.on_pause)
 
         self.tree_all_devices.itemDoubleClicked.connect(self._tree_clicked)
@@ -107,14 +106,10 @@ class RobotMonitorWidget(AbstractStatusWidget):
         self._last_message_time = 0.0
 
         self._timer = QTimer()
-        # self._timer.timerEvent.connect(self._update_message_state)
         self._timer.timeout.connect(self._update_message_state)
         self._timer.start(1000)
 
-        self._sub = rospy.Subscriber(
-                                    topic,  # name of the topic
-                                    DiagnosticArray,  # type of the topic
-                                    self._cb)
+        self._sub = rospy.Subscriber(topic, DiagnosticArray, self._cb)
 
         self._sig_new_diagnostic.connect(self.new_diagnostic)
         self._original_base_color = self.tree_all_devices.palette().base().color()
@@ -127,9 +122,9 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
         :type msg: DiagnosticArray
         """
-
-        # Directly calling callback function 'new_diagnostic' here results in
-        # segfaults.
+        # This is the subscriber callback.
+        # calling UI methods on the ROS thread segfaults, so we emit a signal
+        # insteadl.
         self._sig_new_diagnostic.emit(msg)
 
     def new_diagnostic(self, msg, is_forced=False):
@@ -338,6 +333,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
         :type paused: bool
         :type diagnostic_arr: DiagnosticArray
         """
+        raise Exception() # TODO(ahendrix): this isn't called
 
         if paused:
             self.pause(diagnostic_arr)

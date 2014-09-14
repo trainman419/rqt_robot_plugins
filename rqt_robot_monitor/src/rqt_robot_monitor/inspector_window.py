@@ -67,8 +67,7 @@ class InspectorWindow(AbstractStatusWidget):
         self.snapshot = QPushButton("StatusSnapshot")
 
         self.timeline_pane = TimelinePane(self)
-        self.timeline_pane.set_timeline_data(util.SECONDS_TIMELINE,
-                                             self.get_color_for_value,
+        self.timeline_pane.set_timeline_data(self.get_color_for_value,
                                              self.on_pause)
 
         self.layout_vertical.addWidget(self.disp, 1)
