@@ -38,16 +38,15 @@ import rospkg
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import QTimer, Signal, Qt
-from python_qt_binding.QtGui import QColor, QPalette
+from python_qt_binding.QtGui import QColor, QPalette, QWidget
 import rospy
 
-from .abst_status_widget import AbstractStatusWidget
 from .chronologic_state import InstantaneousState, StatusItem
 from .time_pane import TimelinePane
 import util_robot_monitor as util
 
 
-class RobotMonitorWidget(AbstractStatusWidget):
+class RobotMonitorWidget(QWidget):
     """
     NOTE: RobotMonitorWidget.shutdown function needs to be called
     when the instance of this class terminates.
@@ -87,8 +86,7 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
         # TODO: Declaring timeline pane.
         #      Needs to be stashed away into .ui file but so far failed.
-        self.timeline_pane.set_timeline_data(self.get_color_for_value,
-                                             self.on_pause)
+        self.timeline_pane.set_timeline_data(self.get_color_for_value)
 
         self.tree_all_devices.itemDoubleClicked.connect(self._tree_clicked)
         self.warn_flattree.itemDoubleClicked.connect(self._tree_clicked)
@@ -129,8 +127,6 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
     def new_diagnostic(self, msg, is_forced=False):
         """
-        Overridden from AbstractStatusWidget.
-
         When monitoring not paused, this public method updates all the
         treewidgets contained in this class, and also notifies the StatusItem
         instances that are stored in the all-device-tree, which eventually
@@ -323,38 +319,6 @@ class RobotMonitorWidget(AbstractStatusWidget):
         """
 
         self._paused = False
-
-    def on_pause(self, paused, diagnostic_arr):
-        """
-        Check if InspectorWindows are set. If they are, pause them.
-
-        Pay attention not to confuse with RobotMonitorWidget.pause.
-
-        :type paused: bool
-        :type diagnostic_arr: DiagnosticArray
-        """
-        raise Exception() # TODO(ahendrix): this isn't called
-
-        if paused:
-            self.pause(diagnostic_arr)
-        elif (len(self._toplevel_statitems) > 0):
-            diag_array_queue = self.timeline_pane._get_diagnosticarray()
-            statitems = []
-            for diag_arr in diag_array_queue:
-                state_instant = InstantaneousState()
-                state_instant.update(diag_arr)
-                statitems.append(state_instant)
-
-        for statitem_toplv in self._toplevel_statitems:
-            if (paused):
-                statitem_toplv.disable()
-            else:
-                statitem_toplv.enable()
-                for state_instant in statitems:
-                    items = state_instant.get_items()
-                    if statitem_toplv.get_name() in items:
-                        statitem_toplv.update(
-                                       items[statitem_toplv.get_name()].status)
 
     def _update_flat_tree(self, diag_arr):
         """
@@ -571,8 +535,6 @@ class RobotMonitorWidget(AbstractStatusWidget):
 
     def get_color_for_value(self, queue_diagnostic, color_index):
         """
-        Overridden from AbstractStatusWidget.
-
         :type color_index: int
         """
 

@@ -33,16 +33,15 @@
 # Author: Isaac Saito, Ze'ev Klapow
 
 from python_qt_binding.QtCore import Signal
-from python_qt_binding.QtGui import QPushButton, QTextEdit, QVBoxLayout
+from python_qt_binding.QtGui import QPushButton, QTextEdit, QVBoxLayout, QWidget
 import rospy
 
-from .abst_status_widget import AbstractStatusWidget
 from .status_snapshot import StatusSnapshot, level_to_text
 from .time_pane import TimelinePane
 import util_robot_monitor as util
 
 
-class InspectorWindow(AbstractStatusWidget):
+class InspectorWindow(QWidget):
     _sig_close_window = Signal()
 
     def __init__(self, status, close_callback):
@@ -67,8 +66,7 @@ class InspectorWindow(AbstractStatusWidget):
         self.snapshot = QPushButton("Snapshot")
 
         self.timeline_pane = TimelinePane(self)
-        self.timeline_pane.set_timeline_data(self.get_color_for_value,
-                                             self.on_pause)
+        self.timeline_pane.set_timeline_data(self.get_color_for_value)
 
         self.layout_vertical.addWidget(self.disp, 1)
         self.layout_vertical.addWidget(self.timeline_pane, 0)
@@ -101,26 +99,6 @@ class InspectorWindow(AbstractStatusWidget):
         rospy.logdebug('InspectorWin pause UN-PAUSED')
         self.paused = False
 
-    def new_diagnostic(self, msg, is_forced=False):
-        """
-        Overridden from AbstractStatusWidget
-
-        :type status: DiagnosticsStatus
-        """
-        raise Exception() # TODO(ahendrix): I think this is unused. prove it
-
-        if not self.paused:
-            self.update_status_display(msg)
-            rospy.logdebug('InspectorWin _cb len of queue=%d self.paused=%s',
-                          len(self.timeline_pane._queue_diagnostic),
-                          self.paused)
-        else:
-            if is_forced:
-                self.update_status_display(msg, True)
-                rospy.logdebug('@@@InspectorWin _cb PAUSED window updated')
-            else:
-                rospy.logdebug('@@@InspectorWin _cb PAUSED not updated')
-
     def update_status_display(self, status, is_forced=False):
         """
         :type status: DiagnosticsStatus
@@ -145,10 +123,10 @@ class InspectorWindow(AbstractStatusWidget):
 
     def get_color_for_value(self, queue_diagnostic, color_index):
         """
-        Overridden from AbstractStatusWidget.
 
         :type color_index: int
         """
+        # TODO(ahendrix): figure out what this does and do something simpler
 
         rospy.logdebug('InspectorWindow get_color_for_value ' +
                        'queue_diagnostic=%d, color_index=%d',

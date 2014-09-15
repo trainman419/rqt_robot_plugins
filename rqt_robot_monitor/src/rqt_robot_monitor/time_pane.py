@@ -74,16 +74,11 @@ class TimelinePane(QWidget):
         super(TimelinePane, self).__init__()
         self._parent = parent
 
-    def set_timeline_data(self, color_callback, pause_callback):
-        #TODO(Isaac) pause_callback is MUST since it's used in both by
-        #            RobotMonitorWidget & InspectorWindow.
-        # TODO(ahendrix): should pause_callback be a signal?
-        # TODO(ahendrix): pause_callback is never called
+    def set_timeline_data(self, color_callback):
         # TODO(ahendrix): should color_callback be a signal?
         """
         :param color_callback: Not directly used within this class. Instead,
         this will be passed and used in TimelineView class.
-        :param pause_callback: Called when the callback is paused
         """
         rp = rospkg.RosPack()
         ui_file = os.path.join(rp.get_path('rqt_robot_monitor'),
@@ -91,7 +86,6 @@ class TimelinePane(QWidget):
                                'timelinepane.ui')
         loadUi(ui_file, self, {'TimelineView': TimelineView})
 
-        self._pause_callback = pause_callback
         self._timeline_view.set_init_data(1, SECONDS_TIMELINE, 5,
                                           color_callback)
 
