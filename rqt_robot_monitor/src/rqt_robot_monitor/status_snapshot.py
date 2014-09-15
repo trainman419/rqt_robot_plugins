@@ -40,14 +40,7 @@ from python_qt_binding.QtGui import QTextEdit
 from python_qt_binding.QtCore import Signal
 
 from diagnostic_msgs.msg import DiagnosticStatus
-
-_LEVEL_TO_TEXT = { 0: "OK", 1: "WARNING", 2: "ERROR", 3: "STALE" }
-
-def level_to_text(level):
-    if level in _LEVEL_TO_TEXT:
-        return _LEVEL_TO_TEXT[level]
-    else:
-        return "UNKNOWN(%d)" % ( level )
+from util_robot_monitor import level_to_text
 
 class StatusSnapshot(QTextEdit):
     """Display a single static status message. Helps facilitate copy/paste"""

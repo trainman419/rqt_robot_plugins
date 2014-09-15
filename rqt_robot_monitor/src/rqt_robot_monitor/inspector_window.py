@@ -131,5 +131,5 @@ class InspectorWindow(QWidget):
         rospy.logdebug('InspectorWindow get_color_for_value ' +
                        'queue_diagnostic=%d, color_index=%d',
                        len(queue_diagnostic), color_index)
-        lv_index = queue_diagnostic[color_index - 1].level
-        return util.COLOR_DICT[lv_index]
+        # TODO: why do we do color_index - 1 here?
+        return util.level_to_color(queue_diagnostic[color_index - 1].level)

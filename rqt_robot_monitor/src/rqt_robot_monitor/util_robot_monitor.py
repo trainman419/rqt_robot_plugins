@@ -45,18 +45,33 @@ _OK_ICON = QIcon.fromTheme('emblem-default')
 # Added following this QA thread http://goo.gl/83tVZ
 _STALE_ICON = QIcon.fromTheme('dialog-question')
 
-IMG_DICT = {0: _OK_ICON, 1: _WARN_ICON, 2: _ERR_ICON, 3: _STALE_ICON}
+_LEVEL_TO_ICON = {0: _OK_ICON, 1: _WARN_ICON, 2: _ERR_ICON, 3: _STALE_ICON}
 
-COLOR_DICT = {0: QColor(85, 178, 76),
-               1: QColor(222, 213, 17),
-               2: QColor(178, 23, 46),
-               3: QColor(40, 23, 176)
-               }
-# DiagnosticStatus dosn't have Stale status. Related QA:http://goo.gl/83tVZ
-# It's not ideal to add STALE to DiagnosticStatus as you see in that thread
-# but here this addition is only temporary for the purpose of
-# implementation simplicity.
-DiagnosticStatus.STALE = 3
+_LEVEL_TO_COLOR = {0: QColor(85, 178, 76),  # green
+                   1: QColor(222, 213, 17), # yellow
+                   2: QColor(178, 23, 46),  # red
+                   3: QColor(40, 23, 176)   # blue
+                   }
+
+_LEVEL_TO_TEXT = { 0: "OK", 1: "WARNING", 2: "ERROR", 3: "STALE" }
+
+def level_to_icon(level):
+    if level in _LEVEL_TO_ICON:
+        return _LEVEL_TO_ICON[level]
+    else:
+        return _ERR_ICON
+
+def level_to_color(level):
+    if level in _LEVEL_TO_COLOR:
+        return _LEVEL_TO_COLOR[level]
+    else:
+        return _LEVEL_TO_COLOR[2]
+
+def level_to_text(level):
+    if level in _LEVEL_TO_TEXT:
+        return _LEVEL_TO_TEXT[level]
+    else:
+        return "UNKNOWN(%d)" % ( level )
 
 _DICTKEY_TIMES_ERROR = 'times_errors'
 _DICTKEY_TIMES_WARN = 'times_warnings'
@@ -76,7 +91,7 @@ def update_status_images(diagnostic_status, statusitem):
     if (name is not None):
         level = diagnostic_status.level
         if (diagnostic_status.level != statusitem.last_level):
-            statusitem.setIcon(0, IMG_DICT[level])
+            statusitem.setIcon(0, level_to_icon(level))
             statusitem.last_level = level
             return
 
@@ -129,9 +144,8 @@ def _get_color_for_message(msg, mode=0):
     if (level > 2 and min_level <= 2):
         level = 2
 
-    # return IMG_DICT[level]
     rospy.logdebug(' get_color_for_message color lv=%d', level)
-    return COLOR_DICT[level]
+    return level_to_color(level)
 
 def get_correspondent(key, list_statitem):
     """

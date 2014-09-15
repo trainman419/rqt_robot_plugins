@@ -434,7 +434,7 @@ class RobotMonitorWidget(QWidget):
 
         statusitem.setText(0, headline)
         statusitem.setText(1, statusmsg)
-        statusitem.setIcon(0, util.IMG_DICT[statlevel])
+        statusitem.setIcon(0, util.level_to_icon(statlevel))
         statitem_list.append(statusitem)
         tree.addTopLevelItem(statusitem)
         rospy.logdebug(' _add_statitem statitem_list length=%d',
