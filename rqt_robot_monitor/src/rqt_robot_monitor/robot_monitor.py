@@ -37,12 +37,14 @@ import rospkg
 
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
 from python_qt_binding import loadUi
-from python_qt_binding.QtCore import QTimer, Signal, Qt
+from python_qt_binding.QtCore import QTimer, Signal, Qt, Slot
 from python_qt_binding.QtGui import QColor, QPalette, QWidget
 import rospy
 
-from .chronologic_state import InstantaneousState, StatusItem
+#from .chronologic_state import InstantaneousState
+from .chronologic_state import StatusItem
 from .time_pane import TimelinePane
+from .timeline import Timeline
 import util_robot_monitor as util
 
 
@@ -73,7 +75,6 @@ class RobotMonitorWidget(QWidget):
         ui_file = os.path.join(rp.get_path('rqt_robot_monitor'), 'resource',
                                'robotmonitor_mainwidget.ui')
         loadUi(ui_file, self, {'TimelinePane': TimelinePane})
-        #loadUi(ui_file, self)
 
         obj_name = 'Robot Monitor'
         self.setObjectName(obj_name)
@@ -84,9 +85,13 @@ class RobotMonitorWidget(QWidget):
                                 # (device top level, device' _sub) in parallel
         self._err_statusitems = []  # StatusItem
 
+        self._timeline = Timeline(topic, DiagnosticArray)
+        self._timeline.message_updated.connect(self.message_updated)
+
         # TODO: Declaring timeline pane.
         #      Needs to be stashed away into .ui file but so far failed.
         self.timeline_pane.set_timeline_data(self.get_color_for_value)
+        self.timeline_pane.set_timeline(self._timeline)
 
         self.tree_all_devices.itemDoubleClicked.connect(self._tree_clicked)
         self.warn_flattree.itemDoubleClicked.connect(self._tree_clicked)
@@ -100,56 +105,22 @@ class RobotMonitorWidget(QWidget):
         self.timeline_pane.show()
 
         self._paused = False
-        self._is_stale = None
+        self._is_stale = True
         self._last_message_time = 0.0
 
         self._timer = QTimer()
         self._timer.timeout.connect(self._update_message_state)
         self._timer.start(1000)
 
-        self._sub = rospy.Subscriber(topic, DiagnosticArray, self._cb)
-
         self._sig_new_diagnostic.connect(self.new_diagnostic)
         self._original_base_color = self.tree_all_devices.palette().base().color()
         self._original_alt_base_color = self.tree_all_devices.palette().alternateBase().color()
 
-    def _cb(self, msg):
-        """
-        Intended to be called from non-Qt thread,
-        ie. ROS Subscriber in particular.
-
-        :type msg: DiagnosticArray
-        """
-        # This is the subscriber callback.
-        # calling UI methods on the ROS thread segfaults, so we emit a signal
-        # insteadl.
-        self._sig_new_diagnostic.emit(msg)
-
-    def new_diagnostic(self, msg, is_forced=False):
-        """
-        When monitoring not paused, this public method updates all the
-        treewidgets contained in this class, and also notifies the StatusItem
-        instances that are stored in the all-device-tree, which eventually
-        updates the InspectorWindows in them.
-
-        :type msg: DiagnosticArray
-        :param is_forced: Intended for non-incoming-msg trigger
-         (in particular, from child object like TimelinePane).
-        @author: Isaac Saito
-         """
-        if not self._paused and not is_forced:
-            self.timeline_pane.new_diagnostic(msg)
-            self._update_devices_tree(msg)
-            self._update_warns_errors(msg)
-            self._on_new_message_received(msg)
-
-            self._notify_statitems(msg)
-
-            rospy.logdebug('  RobotMonitorWidget _cb stamp=%s',
-                       msg.header.stamp)
-        elif is_forced:
-            self._update_devices_tree(msg)
-            self._update_warns_errors(msg)
+    @Slot()
+    def message_updated(self):
+        length, msg = self._timeline.get_current()
+        self._update_devices_tree(msg)
+        self._update_warns_errors(msg)
 
     def _notify_statitems(self, diag_arr):
         """
@@ -514,19 +485,23 @@ class RobotMonitorWidget(QWidget):
         for item in self._toplevel_statitems:
             item.close()
 
-        self._sub.unregister()
+        self._timeline.shutdown()
 
         self._timer.stop()
         del self._timer
 
     def save_settings(self, plugin_settings, instance_settings):
         instance_settings.set_value('splitter', self.splitter.saveState())
+        # TODO(ahendrix): persist the device paths, positions and sizes of any
+        #                 inspector windows
 
     def restore_settings(self, plugin_settings, instance_settings):
         if instance_settings.contains('splitter'):
             self.splitter.restoreState(instance_settings.value('splitter'))
         else:
             self.splitter.setSizes([100, 100, 200])
+        # TODO(ahendrix): restore inspector windows
+
 
     def _clear(self):
         rospy.logdebug(' RobotMonitorWidget _clear called ')

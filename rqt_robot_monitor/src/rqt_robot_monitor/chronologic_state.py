@@ -169,7 +169,7 @@ class StatusItem(QTreeWidgetItem):
             status_item.close()
 
 
-class InstantaneousState(object):
+class State(object):
     """
     A container for StatusItem per timeframe (second).
 

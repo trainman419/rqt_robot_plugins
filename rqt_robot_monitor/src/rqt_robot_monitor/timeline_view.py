@@ -64,6 +64,8 @@ class TimelineView(QGraphicsView):
         self._sig_update.connect(self.slot_redraw)
         self._color_callback = None
 
+        self._timeline = None
+
         self.setUpdatesEnabled(True)  # In a trial to enable update()
 
     def set_init_data(self, min_xpos_marker, max_num_seconds,
@@ -80,6 +82,12 @@ class TimelineView(QGraphicsView):
         self._max_num_seconds = max_num_seconds
         self._xpos_marker = xpos_marker
         self._color_callback = color_callback
+
+    def set_timeline(self, timeline):
+        assert(self._timeline is None)
+        self._timeline = timeline
+        # TODO: connect this to something
+        #self._timeline.message_updated.connect(self.updated)
 
     def set_range(self, min_val, max_val):
         """
@@ -119,6 +127,7 @@ class TimelineView(QGraphicsView):
         self.set_val_from_x(event.pos().x())
 
         # TODO Figure out what's done by this in wx.
+        # I suspect this reads the scroll wheel
         # wx.PostEvent(self.GetEventHandler(),
         #             wx.PyCommandEvent(wx.EVT_COMMAND_SCROLL_CHANGED.typeId,
         #                               self.GetId()))
@@ -130,6 +139,7 @@ class TimelineView(QGraphicsView):
         self.set_val_from_x(evt.pos().x())
 
         # TODO Figure out what's done by this in wx.
+        # I suspect this reads the scroll wheel
         # wx.PostEvent(self.GetEventHandler(),
         #             wx.PyCommandEvent(wx.EVT_COMMAND_SCROLL_THUMBTRACK.typeId
         #                               self.GetId()))
@@ -157,7 +167,6 @@ class TimelineView(QGraphicsView):
         self._xpos_marker = self._clamp(int(val),
                                         self._min_num_seconds,
                                         self._max_num_seconds)
-        #self.repaint()  # # This might result in segfault.
         self._sig_update.emit()
 
     def _clamp(self, val, min, max):
@@ -196,28 +205,30 @@ class TimelineView(QGraphicsView):
         w = width_tl / float(len_queue)
         is_enabled = self.isEnabled()
 
-        for i, m in enumerate(self._parent.get_diagnostic_queue()):
-            h = self.viewport().height()
 
-            # Figure out each cell's color.
-            qcolor = None
-            color_index = i + self._min_num_seconds
-            if (is_enabled):
-                qcolor = self._color_callback(
-                                           self._parent.get_diagnostic_queue(),
-                                           color_index)
-            else:
+        if self._timeline is not None:
+            for i, m in enumerate(self._timeline):
+                h = self.viewport().height()
+
+                # Figure out each cell's color.
                 qcolor = QColor('grey')
+                color_index = i + self._min_num_seconds
+                if is_enabled:
+                    # TODO: determine color for m
+                    pass
+                    #qcolor = self._color_callback(
+                    #             self._parent.get_diagnostic_queue(),
+                    #             color_index)
 
 #  TODO Use this code for adding gradation to the cell color.
-#            end_color = QColor(0.5 * QColor('red').value(),
-#                               0.5 * QColor('green').value(),
-#                               0.5 * QColor('blue').value())
+#                end_color = QColor(0.5 * QColor('red').value(),
+#                                   0.5 * QColor('green').value(),
+#                                   0.5 * QColor('blue').value())
 
-            self._parent._scene.addRect(w * i, 0, w, h,
-                                               QColor('white'), qcolor)
-            rospy.logdebug('slot_redraw #%d th loop w=%s width_tl=%s',
-                           i, w, width_tl)
+                self._parent._scene.addRect(w * i, 0, w, h,
+                                                   QColor('white'), qcolor)
+                rospy.logdebug('slot_redraw #%d th loop w=%s width_tl=%s',
+                               i, w, width_tl)
 
         # Setting marker.
         xpos_marker = ((self._xpos_marker - 1) * w +
