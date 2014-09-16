@@ -119,7 +119,7 @@ class RobotMonitorWidget(QWidget):
         self._timer.timeout.connect(self._update_message_state)
         self._timer.start(1000)
 
-        pallette = self.tree_all_devices.palette()
+        palette = self.tree_all_devices.palette()
         self._original_base_color = palette.base().color()
         self._original_alt_base_color = palette.alternateBase().color()
 
