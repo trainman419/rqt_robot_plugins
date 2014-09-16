@@ -42,6 +42,7 @@ from python_qt_binding.QtGui import QColor, QPalette, QWidget
 import rospy
 
 #from .chronologic_state import InstantaneousState
+from .inspector_window import InspectorWindow
 from .chronologic_state import StatusItem
 from .time_pane import TimelinePane
 from .timeline import Timeline
@@ -58,10 +59,11 @@ class RobotMonitorWidget(QWidget):
     """
 
     _sig_tree_nodes_updated = Signal(int)
-    _sig_new_diagnostic = Signal(DiagnosticArray)
     _TREE_ALL = 1
     _TREE_WARN = 2
     _TREE_ERR = 3
+
+    message_updated = Signal(DiagnosticArray)
 
     def __init__(self, context, topic):
         """
@@ -87,6 +89,11 @@ class RobotMonitorWidget(QWidget):
 
         self._timeline = Timeline(topic, DiagnosticArray)
         self._timeline.message_updated.connect(self.message_updated)
+        self._timeline.message_updated.connect(self.message_cb)
+
+        self._inspectors = {}
+        # keep a copy of the current message for opening new inspectors
+        self._current_msg = None
 
         # TODO: Declaring timeline pane.
         #      Needs to be stashed away into .ui file but so far failed.
@@ -112,13 +119,13 @@ class RobotMonitorWidget(QWidget):
         self._timer.timeout.connect(self._update_message_state)
         self._timer.start(1000)
 
-        self._sig_new_diagnostic.connect(self.new_diagnostic)
-        self._original_base_color = self.tree_all_devices.palette().base().color()
-        self._original_alt_base_color = self.tree_all_devices.palette().alternateBase().color()
+        pallette = self.tree_all_devices.palette()
+        self._original_base_color = palette.base().color()
+        self._original_alt_base_color = palette.alternateBase().color()
 
-    @Slot()
-    def message_updated(self):
-        length, msg = self._timeline.get_current()
+    @Slot(DiagnosticArray)
+    def message_cb(self, msg):
+        self._current_msg = msg
         self._update_devices_tree(msg)
         self._update_warns_errors(msg)
 
@@ -152,7 +159,12 @@ class RobotMonitorWidget(QWidget):
         :type column: int
         """
         rospy.logdebug('RobotMonitorWidget _tree_clicked col=%d', column)
-        item.on_click()
+        if item.name in self._inspectors:
+            self._inspectors[item.name].activateWindow()
+        else:
+            self._inspectors[item.name] = InspectorWindow(self, item.name,
+                    self._current_msg, self._timeline)
+            # TODO: update inspector with current message
 
     def _update_devices_tree(self, diag_array):
         """
@@ -282,7 +294,7 @@ class RobotMonitorWidget(QWidget):
 
         if not self._paused:
             self._paused = True
-            self.new_diagnostic(msg)
+            #self.new_diagnostic(msg)
 
     def unpause(self, msg=None):
         """

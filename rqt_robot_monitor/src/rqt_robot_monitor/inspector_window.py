@@ -32,7 +32,7 @@
 #
 # Author: Isaac Saito, Ze'ev Klapow
 
-from python_qt_binding.QtCore import Signal
+from python_qt_binding.QtCore import Signal, Slot
 from python_qt_binding.QtGui import QPushButton, QTextEdit, QVBoxLayout, QWidget
 import rospy
 
@@ -40,11 +40,13 @@ from .status_snapshot import StatusSnapshot, level_to_text
 from .time_pane import TimelinePane
 import util_robot_monitor as util
 
+from diagnostic_msgs.msg import DiagnosticArray
+
 
 class InspectorWindow(QWidget):
     _sig_close_window = Signal()
 
-    def __init__(self, status, close_callback):
+    def __init__(self, parent, name, status, timeline, close_callback=None):
         """
         :type status: DiagnosticStatus
         :param close_callback: When the instance of this class
@@ -55,9 +57,7 @@ class InspectorWindow(QWidget):
         #            needs to be done in .ui file.
 
         super(InspectorWindow, self).__init__()
-        self.status = status
-        self._close_callback = close_callback
-        self.setWindowTitle(status.name)
+        self.setWindowTitle(name)
         self.paused = False
 
         self.layout_vertical = QVBoxLayout(self)
@@ -67,6 +67,8 @@ class InspectorWindow(QWidget):
 
         self.timeline_pane = TimelinePane(self)
         self.timeline_pane.set_timeline_data(self.get_color_for_value)
+        if timeline is not None:
+            self.timeline_pane.set_timeline(timeline)
 
         self.layout_vertical.addWidget(self.disp, 1)
         self.layout_vertical.addWidget(self.timeline_pane, 0)
@@ -75,13 +77,14 @@ class InspectorWindow(QWidget):
         self.snaps = []
         self.snapshot.clicked.connect(self._take_snapshot)
 
-        self._sig_close_window.connect(self._close_callback)
+        if close_callback is not None:
+            self._sig_close_window.connect(close_callback)
 
         self.setLayout(self.layout_vertical)
         # TODO better to be configurable where to appear.
         self.resize(400, 600)
         self.show()
-        self.update_status_display(status)
+        self.message_updated(status)
 
     def closeEvent(self, event):
         # emit signal that should be slotted by StatusItem
@@ -116,6 +119,20 @@ class InspectorWindow(QWidget):
             if self.disp.verticalScrollBar().maximum() < scroll_value:
                 scroll_value = self.disp.verticalScrollBar().maximum()
             self.disp.verticalScrollBar().setValue(scroll_value)
+
+    @Slot(DiagnosticArray)
+    def message_updated(self, msg):
+        status = msg.status[0] # FIXME
+        scroll_value = self.disp.verticalScrollBar().value()
+
+        rospy.logdebug('InspectorWin message_updated')
+
+        self.status = status
+        self.disp.write_status.emit(status)
+
+        if self.disp.verticalScrollBar().maximum() < scroll_value:
+            scroll_value = self.disp.verticalScrollBar().maximum()
+        self.disp.verticalScrollBar().setValue(scroll_value)
 
     def _take_snapshot(self):
         snap = StatusSnapshot(status=self.status)

@@ -37,6 +37,8 @@ from python_qt_binding.QtCore import Signal, QObject
 
 import rospy
 
+from diagnostic_msgs.msg import DiagnosticArray
+
 class Timeline(QObject):
     """
     A class which represents the status history of diagnostics
@@ -46,7 +48,7 @@ class Timeline(QObject):
     #       in inspector windows?
     # or just support fetching by index and subtree
 
-    message_updated = Signal()
+    message_updated = Signal(DiagnosticArray)
     pause_changed = Signal(bool)
 
     def __init__(self, topic, topic_type, count=30):
@@ -60,14 +62,13 @@ class Timeline(QObject):
         # new history are not lost
         self._paused_queue = None
 
-        self._subscriber = None
-        if topic is not None:
-            self._subscriber = rospy.Subscriber(topic, topic_type,
-                                                self.callback, queue_size=10)
+        self._subscriber = rospy.Subscriber(topic, topic_type, self.callback,
+                                            queue_size=10)
 
     def shutdown(self):
         self._subscriber.unregister()
 
+    # TODO: there are too many pause/unpause functions. clean it up
     def pause(self):
         if self.paused:
             return
@@ -82,7 +83,7 @@ class Timeline(QObject):
 
         # update pointer to latest message and emit message_updated signal
         self._current_index = -1
-        self.message_updated.emit()
+        self.message_updated.emit(self._queue[self._current_index])
         self.pause_changed.emit(False)
 
     def toggle_paused(self):
@@ -112,7 +113,7 @@ class Timeline(QObject):
             self._paused_queue.append(msg)
         else:
             self._queue.append(msg)
-            self.message_updated.emit()
+            self.message_updated.emit(msg)
 
     def set_position(self, index):
         max_index = len(self._queue) - 1
@@ -121,7 +122,7 @@ class Timeline(QObject):
         index = max(index, min_index)
         if index != self._current_index:
             self._current_index = index
-            self.message_updated.emit()
+            self.message_updated.emit(self._queue[index])
 
     def get_current(self):
         return self._current_index, self._queue[self._current_index]

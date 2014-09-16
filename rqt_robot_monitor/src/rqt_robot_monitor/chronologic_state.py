@@ -33,10 +33,10 @@
 # Author: Isaac Saito, Ze'ev Klapow
 
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
+from python_qt_binding.QtCore import Signal
 from python_qt_binding.QtGui import QTreeWidgetItem
 import rospy
 
-from .inspector_window import InspectorWindow
 import util_robot_monitor as util
 
 
@@ -138,13 +138,6 @@ class StatusItem(QTreeWidgetItem):
                        errors, warnings)
         return {util._DICTKEY_TIMES_ERROR: errors,
                 util._DICTKEY_TIMES_WARN: warnings}
-
-    def on_click(self):
-        if not self.inspector:
-            self.inspector = InspectorWindow(self.status,
-                                             self.close_inspector_window)
-        else:
-            self.inspector.activateWindow()
 
     def close_inspector_window(self):
         rospy.logdebug(' ------ Statusitem close_inspector_window 1')
