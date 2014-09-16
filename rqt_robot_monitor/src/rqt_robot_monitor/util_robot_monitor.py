@@ -182,3 +182,9 @@ def get_children(name, diag_array):
                                         # from that of the top/parent node.
                 ret.append(k)
     return ret
+
+def get_status_by_name(msg, name):
+    for status in msg.status:
+        if status.name == name:
+            return status
+    return None

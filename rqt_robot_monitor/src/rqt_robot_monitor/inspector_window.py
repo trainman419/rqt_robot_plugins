@@ -58,6 +58,7 @@ class InspectorWindow(QWidget):
 
         super(InspectorWindow, self).__init__()
         self.setWindowTitle(name)
+        self._name = name
         self.paused = False
 
         self.layout_vertical = QVBoxLayout(self)
@@ -66,7 +67,6 @@ class InspectorWindow(QWidget):
         self.snapshot = QPushButton("Snapshot")
 
         self.timeline_pane = TimelinePane(self)
-        #self.timeline_pane.set_timeline_data(self.get_color_for_value)
         if timeline is not None:
             self.timeline_pane.set_timeline(timeline, name)
 
@@ -122,7 +122,7 @@ class InspectorWindow(QWidget):
 
     @Slot(DiagnosticArray)
     def message_updated(self, msg):
-        status = msg.status[0] # FIXME
+        status = util.get_status_by_name(msg, self._name)
         scroll_value = self.disp.verticalScrollBar().value()
 
         rospy.logdebug('InspectorWin message_updated')
@@ -138,15 +138,3 @@ class InspectorWindow(QWidget):
         snap = StatusSnapshot(status=self.status)
         self.snaps.append(snap)
 
-    def get_color_for_value(self, queue_diagnostic, color_index):
-        """
-
-        :type color_index: int
-        """
-        # TODO(ahendrix): figure out what this does and do something simpler
-
-        rospy.logdebug('InspectorWindow get_color_for_value ' +
-                       'queue_diagnostic=%d, color_index=%d',
-                       len(queue_diagnostic), color_index)
-        # TODO: why do we do color_index - 1 here?
-        return util.level_to_color(queue_diagnostic[color_index - 1].level)

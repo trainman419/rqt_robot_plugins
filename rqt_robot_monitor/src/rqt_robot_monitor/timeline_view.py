@@ -256,6 +256,10 @@ class TimelineView(QGraphicsView):
 
         if self._name is not None:
             # TODO: look up name in msg; return grey if not found
-            return QColor('grey')
+            status = util.get_status_by_name(msg, self._name)
+            if status is not None:
+                return util.level_to_color(status.level)
+            else:
+                return QColor('grey')
         # TODO: make this a public function in util
         return util._get_color_for_message(msg)
