@@ -87,18 +87,22 @@ class RobotMonitorWidget(QWidget):
                                 # (device top level, device' _sub) in parallel
         self._err_statusitems = []  # StatusItem
 
-        self._timeline = Timeline(topic, DiagnosticArray)
-        self._timeline.message_updated.connect(self.message_updated)
-        self._timeline.message_updated.connect(self.message_cb)
+        if topic:
+            self._timeline = Timeline(topic, DiagnosticArray)
+            self._timeline.message_updated.connect(self.message_updated)
+            self._timeline.message_updated.connect(self.message_cb)
+
+            self.timeline_pane.set_timeline(self._timeline)
+
+            self.vlayout_top.addWidget(self.timeline_pane)
+            self.timeline_pane.show()
+        else:
+            self._timeline = None
 
         self._inspectors = {}
         # keep a copy of the current message for opening new inspectors
         self._current_msg = None
 
-        # TODO: Declaring timeline pane.
-        #      Needs to be stashed away into .ui file but so far failed.
-        self.timeline_pane.set_timeline_data(self.get_color_for_value)
-        self.timeline_pane.set_timeline(self._timeline)
 
         self.tree_all_devices.itemDoubleClicked.connect(self._tree_clicked)
         self.warn_flattree.itemDoubleClicked.connect(self._tree_clicked)
@@ -108,8 +112,6 @@ class RobotMonitorWidget(QWidget):
 
         self._sig_tree_nodes_updated.connect(self._tree_nodes_updated)
 
-        self.vlayout_top.addWidget(self.timeline_pane)
-        self.timeline_pane.show()
 
         self._paused = False
         self._is_stale = True
@@ -164,7 +166,6 @@ class RobotMonitorWidget(QWidget):
         else:
             self._inspectors[item.name] = InspectorWindow(self, item.name,
                     self._current_msg, self._timeline)
-            # TODO: update inspector with current message
 
     def _update_devices_tree(self, diag_array):
         """
@@ -520,17 +521,3 @@ class RobotMonitorWidget(QWidget):
         self.err_flattree.clear()
         self.warn_flattree.clear()
 
-    def get_color_for_value(self, queue_diagnostic, color_index):
-        """
-        :type color_index: int
-        """
-
-        len_q = len(queue_diagnostic)
-        rospy.logdebug(' get_color_for_value color_index=%d len_q=%d',
-                      color_index, len_q)
-        if (color_index == 1 and len_q == 0):
-            # TODO: Needs to be reverted back
-            return QColor('grey')
-        return util._get_color_for_message(queue_diagnostic[color_index - 1])
-        # When _queue_diagnostic is empty,
-        # this yield error when color_index > 0.

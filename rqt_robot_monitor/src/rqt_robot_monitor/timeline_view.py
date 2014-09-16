@@ -38,6 +38,8 @@ from python_qt_binding.QtCore import QPointF, Signal
 from python_qt_binding.QtGui import (QColor, QGraphicsPixmapItem,
                                      QGraphicsView, QIcon)
 
+import util_robot_monitor as util
+
 
 class TimelineView(QGraphicsView):
     """
@@ -62,17 +64,16 @@ class TimelineView(QGraphicsView):
         self._timeline_marker_height = 15
 
         self._sig_update.connect(self.slot_redraw)
-        self._color_callback = None
 
         self._timeline = None
 
         self.setUpdatesEnabled(True)  # In a trial to enable update()
 
     def set_init_data(self, min_xpos_marker, max_num_seconds,
-                       xpos_marker, color_callback):
+                       xpos_marker):
         """
         This function needs to be called right after the class is instantiated,
-        in order to pass necessary values. _color_callback
+        in order to pass necessary values.
 
         This function is to compensate the functional limitation of
         python_qt_binding.loadUi that doesn't allow you to pass arguments in
@@ -81,10 +82,10 @@ class TimelineView(QGraphicsView):
         self._min_num_seconds = min_xpos_marker
         self._max_num_seconds = max_num_seconds
         self._xpos_marker = xpos_marker
-        self._color_callback = color_callback
 
-    def set_timeline(self, timeline):
+    def set_timeline(self, timeline, name=None):
         assert(self._timeline is None)
+        self._name = name
         self._timeline = timeline
         # TODO: connect this to something
         #self._timeline.message_updated.connect(self.updated)
@@ -216,9 +217,7 @@ class TimelineView(QGraphicsView):
                 if is_enabled:
                     # TODO: determine color for m
                     pass
-                    #qcolor = self._color_callback(
-                    #             self._parent.get_diagnostic_queue(),
-                    #             color_index)
+                    qcolor = self.get_color_for_value(m)
 
 #  TODO Use this code for adding gradation to the cell color.
 #                end_color = QColor(0.5 * QColor('red').value(),
@@ -249,3 +248,14 @@ class TimelineView(QGraphicsView):
                                                 self._timeline_marker_width,
                                                 self._timeline_marker_height)
         return QGraphicsPixmapItem(timeline_marker_icon_pixmap)
+
+    def get_color_for_value(self, msg):
+        """
+        :type color_index: int
+        """
+
+        if self._name is not None:
+            # TODO: look up name in msg; return grey if not found
+            return QColor('grey')
+        # TODO: make this a public function in util
+        return util._get_color_for_message(msg)

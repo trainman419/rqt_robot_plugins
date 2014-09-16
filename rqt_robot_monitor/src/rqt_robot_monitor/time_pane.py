@@ -85,6 +85,7 @@ class TimelinePane(QWidget):
         loadUi(ui_file, self)
 
         self._scene = QGraphicsScene(self._timeline_view)
+        self._timeline_view.set_init_data(1, SECONDS_TIMELINE, 5)
         self._timeline_view.setScene(self._scene)
         self._timeline_view.show()
 
@@ -92,20 +93,11 @@ class TimelinePane(QWidget):
 
         self.sig_update.connect(self._timeline_view.slot_redraw)
 
-    def set_timeline(self, timeline):
+    def set_timeline(self, timeline, name=None):
         assert(self._timeline is None)
         self._timeline = timeline
         self._timeline.message_updated.connect(self.updated)
-        self._timeline_view.set_timeline(timeline)
-
-    def set_timeline_data(self, color_callback):
-        # TODO(ahendrix): should color_callback be a signal?
-        """
-        :param color_callback: Not directly used within this class. Instead,
-        this will be passed and used in TimelineView class.
-        """
-        self._timeline_view.set_init_data(1, SECONDS_TIMELINE, 5,
-                                          color_callback)
+        self._timeline_view.set_timeline(timeline, name)
 
     def mouse_release(self, event):
         """
