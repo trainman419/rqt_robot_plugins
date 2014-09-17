@@ -114,8 +114,11 @@ class Timeline(QObject):
             self._current_index = index
             self.message_updated.emit(self._queue[index])
 
-    def get_current(self):
-        return self._current_index, self._queue[self._current_index]
+    def get_position(self):
+        index = self._current_index
+        if index < 0:
+            index = len(self._queue) + index
+        return index
 
     def __len__(self):
         return len(self._queue)

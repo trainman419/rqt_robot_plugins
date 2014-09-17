@@ -74,23 +74,16 @@ class TimelinePane(QWidget):
     def set_timeline(self, timeline, name=None):
         assert(self._timeline is None)
         self._timeline = timeline
-        self._timeline.message_updated.connect(self.updated)
+
         self._timeline_view.set_timeline(timeline, name)
+
+        # connect pause button
         self._pause_button.clicked[bool].connect(self._timeline.set_paused)
         self._timeline.pause_changed[bool].connect(
                 self._pause_button.setChecked)
 
         # bootstrap initial state
         self._pause_button.setChecked(self._timeline.paused)
-        self.sig_update.emit()
-
-    @Slot()
-    def updated(self):
-        """ Slot that should be called whenever the underlying Timeline object
-        is updated
-        """
-        assert(self._timeline is not None)
-        self._timeline_view.set_range(1, len(self._timeline))
         self.sig_update.emit()
 
     def redraw(self):
