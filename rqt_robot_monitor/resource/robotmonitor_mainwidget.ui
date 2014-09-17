@@ -126,7 +126,7 @@
   <customwidget>
    <class>TimelinePane</class>
    <extends>QWidget</extends>
-   <header>rqt_robot_monitor.time_pane</header>
+   <header>rqt_robot_monitor.timeline_pane</header>
   </customwidget>
  </customwidgets>
  <resources/>

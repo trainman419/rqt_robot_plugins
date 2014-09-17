@@ -30,11 +30,12 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Author: Isaac Saito, Ze'ev Klapow
+# Author: Isaac Saito, Ze'ev Klapow, Austin Hendrix
 
+from math import floor
 import rospy
 
-from python_qt_binding.QtCore import QPointF, Signal
+from python_qt_binding.QtCore import QPointF, Signal, Slot
 from python_qt_binding.QtGui import (QColor, QGraphicsPixmapItem,
                                      QGraphicsView, QIcon, QGraphicsScene)
 
@@ -69,6 +70,7 @@ class TimelineView(QGraphicsView):
 
         self._timeline_marker_width = 15
         self._timeline_marker_height = 15
+        self._last_marker_at = 2
 
         self._sig_update.connect(self.slot_redraw)
 
@@ -118,8 +120,16 @@ class TimelineView(QGraphicsView):
         """
         :type event: QMouseEvent
         """
+        assert(self._timeline is not None)
 
-        self._parent.mouse_release(event)
+        xpos_clicked = event.x()
+        width_each_cell_shown = float(self.viewport().width()) / len(self._timeline)
+        i = int(floor(xpos_clicked / width_each_cell_shown))
+        rospy.loginfo('mouse_release i=%d width_each_cell_shown=%s',
+                       i, width_each_cell_shown)
+
+        self._timeline.set_position(i)
+
         self.set_val_from_x(event.pos().x())
 
         # TODO Figure out what's done by this in wx.
@@ -132,6 +142,7 @@ class TimelineView(QGraphicsView):
         """
         :type event: QMouseEvent
         """
+        assert(self._timeline is not None)
         self.set_val_from_x(evt.pos().x())
 
         # TODO Figure out what's done by this in wx.
@@ -140,7 +151,24 @@ class TimelineView(QGraphicsView):
         #             wx.PyCommandEvent(wx.EVT_COMMAND_SCROLL_THUMBTRACK.typeId
         #                               self.GetId()))
 
-        self._parent.on_slider_scroll(evt)
+        xpos_marker = self._xpos_marker - 1
+        rospy.loginfo('on_slider_scroll xpos_marker=%s last_sec_marker_at=%s',
+                      xpos_marker, self._last_marker_at)
+        if xpos_marker == self._last_marker_at:
+            # Clicked the same pos as last time.
+            return
+        elif xpos_marker >= len(self._timeline):
+            # When clicked out-of-region
+            return
+
+        self._last_marker_at = xpos_marker
+
+        self._timeline.set_paused(True)
+
+        # Fetch corresponding previous DiagsnoticArray instance from queue,
+        # and sig_update trees.
+        self._timeline.set_position(xpos_marker)
+
 
     def set_val_from_x(self, x):
         """
@@ -155,7 +183,7 @@ class TimelineView(QGraphicsView):
         width_cell = width / float(length_tl_in_second)
         x_marker_float = x / width_cell + 1
         self.set_marker_pos(x_marker_float)
-        rospy.logdebug('TimelineView set_val_from_x x=%s width_cell=%s ' +
+        rospy.loginfo('TimelineView set_val_from_x x=%s width_cell=%s ' +
                       'length_tl_in_second=%s set_marker_pos=%s',
                       x, width_cell, length_tl_in_second, self._xpos_marker)
 
@@ -175,14 +203,13 @@ class TimelineView(QGraphicsView):
         :type max: any number format
         :rtype: int
         """
-        rospy.logdebug(' TimelineView _clamp val=%s min=%s max=%s',
-                       val, min, max)
         if (val < min):
             return min
         if (val > max):
             return max
         return val
 
+    @Slot()
     def slot_redraw(self):
         """
         Gets called either when new msg comes in or when marker is moved by
@@ -208,10 +235,7 @@ class TimelineView(QGraphicsView):
 
                 # Figure out each cell's color.
                 qcolor = QColor('grey')
-                color_index = i + self._min_num_seconds
                 if is_enabled:
-                    # TODO: determine color for m
-                    pass
                     qcolor = self.get_color_for_value(m)
 
 #  TODO Use this code for adding gradation to the cell color.
@@ -246,11 +270,11 @@ class TimelineView(QGraphicsView):
 
     def get_color_for_value(self, msg):
         """
-        :type color_index: int
+        :type msg: DiagnosticArray
         """
 
         if self._name is not None:
-            # TODO: look up name in msg; return grey if not found
+            # look up name in msg; return grey if not found
             status = util.get_status_by_name(msg, self._name)
             if status is not None:
                 return util.level_to_color(status.level)

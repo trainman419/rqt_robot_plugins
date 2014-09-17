@@ -32,7 +32,6 @@
 #
 # Author: Isaac Saito, Ze'ev Klapow, Austin Hendrix
 
-from math import floor
 import os
 
 from python_qt_binding import loadUi
@@ -61,7 +60,6 @@ class TimelinePane(QWidget):
         super(TimelinePane, self).__init__()
         self._parent = parent
         self._timeline = None
-        self._last_sec_marker_at = 2
 
         rp = rospkg.RosPack()
         ui_file = os.path.join(rp.get_path('rqt_robot_monitor'),
@@ -85,46 +83,6 @@ class TimelinePane(QWidget):
         # bootstrap initial state
         self._pause_button.setChecked(self._timeline.paused)
         self.sig_update.emit()
-
-    def mouse_release(self, event):
-        """
-        :type event: QMouseEvent
-        """
-        assert(self._timeline is not None)
-        xpos_clicked = event.x()
-        width_each_cell_shown = float(
-                       self._timeline_view.viewport().width()) / len(
-                                                   self._timeline)
-        i = int(floor(xpos_clicked / width_each_cell_shown))
-        rospy.logdebug('mouse_release i=%d width_each_cell_shown=%s',
-                       i, width_each_cell_shown)
-
-        self._timeline.set_position(i)
-
-    def on_slider_scroll(self, evt):
-        """
-
-        :type evt: QMouseEvent
-        """
-        assert(self._timeline is not None)
-
-        xpos_marker = self._timeline_view.get_xpos_marker() - 1
-        rospy.logdebug('on_slider_scroll xpos_marker=%s last_sec_marker_at=%s',
-                      xpos_marker, self._last_sec_marker_at)
-        if xpos_marker == self._last_sec_marker_at:
-            # Clicked the same pos as last time.
-            return
-        elif xpos_marker >= len(self._timeline):
-            # When clicked out-of-region
-            return
-
-        self._last_sec_marker_at = xpos_marker
-
-        self._timeline.set_paused(True)
-
-        # Fetch corresponding previous DiagsnoticArray instance from queue,
-        # and sig_update trees.
-        self._timeline.set_position(xpos_marker)
 
     @Slot()
     def updated(self):
