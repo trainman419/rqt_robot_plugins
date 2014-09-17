@@ -65,7 +65,7 @@ class RobotMonitorWidget(QWidget):
 
     message_updated = Signal(DiagnosticArray)
 
-    def __init__(self, context, topic):
+    def __init__(self, context, topic=None):
         """
         :param context: plugin context hook to enable adding widgets as a
                         ROS_GUI pane, 'PluginContext'
@@ -76,7 +76,7 @@ class RobotMonitorWidget(QWidget):
         rp = rospkg.RosPack()
         ui_file = os.path.join(rp.get_path('rqt_robot_monitor'), 'resource',
                                'robotmonitor_mainwidget.ui')
-        loadUi(ui_file, self, {'TimelinePane': TimelinePane})
+        loadUi(ui_file, self)
 
         obj_name = 'Robot Monitor'
         self.setObjectName(obj_name)

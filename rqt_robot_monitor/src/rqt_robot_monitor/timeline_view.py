@@ -36,18 +36,25 @@ import rospy
 
 from python_qt_binding.QtCore import QPointF, Signal
 from python_qt_binding.QtGui import (QColor, QGraphicsPixmapItem,
-                                     QGraphicsView, QIcon)
+                                     QGraphicsView, QIcon, QGraphicsScene)
 
 import util_robot_monitor as util
 
 
 class TimelineView(QGraphicsView):
     """
+    This class draws a graphical representation of a timeline.
+
+    This is ONLY the bar and colored boxes.
+
     When you instantiate this class, do NOT forget to call set_init_data to
     set necessary data.
     """
 
     _sig_update = Signal()
+
+    MIN_NUM_SECONDS = 1
+    MAX_NUM_SECONDS = 30
 
     def __init__(self, parent):
         """Cannot take args other than parent due to loadUi limitation."""
@@ -56,9 +63,9 @@ class TimelineView(QGraphicsView):
         self._parent = parent
         self._timeline_marker = QIcon.fromTheme('system-search')
 
-        self._min_num_seconds = 0
-        self._max_num_seconds = 0
-        self._xpos_marker = 0
+        self._min_num_seconds = self.MIN_NUM_SECONDS
+        self._max_num_seconds = self.MAX_NUM_SECONDS
+        self._xpos_marker = 5
 
         self._timeline_marker_width = 15
         self._timeline_marker_height = 15
@@ -67,27 +74,15 @@ class TimelineView(QGraphicsView):
 
         self._timeline = None
 
-        self.setUpdatesEnabled(True)  # In a trial to enable update()
-
-    def set_init_data(self, min_xpos_marker, max_num_seconds,
-                       xpos_marker):
-        """
-        This function needs to be called right after the class is instantiated,
-        in order to pass necessary values.
-
-        This function is to compensate the functional limitation of
-        python_qt_binding.loadUi that doesn't allow you to pass arguments in
-        the custom classes you use in .ui.
-        """
-        self._min_num_seconds = min_xpos_marker
-        self._max_num_seconds = max_num_seconds
-        self._xpos_marker = xpos_marker
+        self.setUpdatesEnabled(True)
+        self._scene = QGraphicsScene(self)
+        self.setScene(self._scene)
 
     def set_timeline(self, timeline, name=None):
         assert(self._timeline is None)
         self._name = name
         self._timeline = timeline
-        # TODO: connect this to something
+        # TODO(ahendrix): connect this to something?
         #self._timeline.message_updated.connect(self.updated)
 
     def set_range(self, min_val, max_val):
@@ -194,7 +189,7 @@ class TimelineView(QGraphicsView):
         user.
         """
 
-        self._parent._scene.clear()
+        self._scene.clear()
 
         qsize = self.size()
         width_tl = qsize.width()
@@ -224,7 +219,7 @@ class TimelineView(QGraphicsView):
 #                                   0.5 * QColor('green').value(),
 #                                   0.5 * QColor('blue').value())
 
-                self._parent._scene.addRect(w * i, 0, w, h,
+                self._scene.addRect(w * i, 0, w, h,
                                                    QColor('white'), qcolor)
                 rospy.logdebug('slot_redraw #%d th loop w=%s width_tl=%s',
                                i, w, width_tl)
@@ -238,7 +233,7 @@ class TimelineView(QGraphicsView):
         # in every loop by scene.clear()
         timeline_marker = self._instantiate_tl_icon()
         timeline_marker.setPos(pos_marker)
-        self._parent._scene.addItem(timeline_marker)
+        self._scene.addItem(timeline_marker)
         rospy.logdebug(' slot_redraw xpos_marker(int)=%s length_tl=%s',
                        int(xpos_marker), length_tl)
 

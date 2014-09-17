@@ -30,32 +30,18 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Author: Isaac Saito, Ze'ev Klapow
-#
-# TODO:
-#   this needs to change pretty considerably
-#
-#   right now, each instance maintains its own history. this means that
-#   each inspector window starts with zero history
-#
-#   the history should instead be global, and each timeline should have
-#   it's own view of the history. I believe this is how the old rx version
-#   worked
+# Author: Isaac Saito, Ze'ev Klapow, Austin Hendrix
 
-from collections import deque
 from math import floor
 import os
 
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import Signal, Slot
-from python_qt_binding.QtGui import QGraphicsScene, QWidget
+from python_qt_binding.QtGui import QWidget
 import rospy
 import rospkg
 
 from .timeline import Timeline
-from .timeline_view import TimelineView
-
-SECONDS_TIMELINE = 30
 
 class TimelinePane(QWidget):
     """
@@ -83,9 +69,6 @@ class TimelinePane(QWidget):
                                'timelinepane.ui')
         loadUi(ui_file, self)
 
-        self._scene = QGraphicsScene(self._timeline_view)
-        self._timeline_view.set_init_data(1, SECONDS_TIMELINE, 5)
-        self._timeline_view.setScene(self._scene)
         self._timeline_view.show()
 
         self.sig_update.connect(self._timeline_view.slot_redraw)

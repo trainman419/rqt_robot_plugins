@@ -33,11 +33,10 @@
 # Author: Isaac Saito, Ze'ev Klapow, Austin Hendrix
 #
 # TODO(ahendrix):
-#   re-use this class in runtime monitor
 #   better formatting of key-value pairs in a table
 
 from python_qt_binding.QtGui import QTextEdit
-from python_qt_binding.QtCore import Signal
+from python_qt_binding.QtCore import Signal, Slot
 
 from diagnostic_msgs.msg import DiagnosticStatus
 from util_robot_monitor import level_to_text
@@ -69,8 +68,10 @@ class StatusSnapshot(QTextEdit):
             self._write(value.key, value.value)
 
     def _write(self, k, v):
+        # TODO(ahendrix): write these as a table rather than as text
         self.setFontWeight(75)
         self.insertPlainText(str(k))
+        # TODO(ahendrix): de-dupe trailing ':' here
         self.insertPlainText(': ')
 
         self.setFontWeight(50)
