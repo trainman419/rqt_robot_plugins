@@ -97,24 +97,11 @@ class TimelineView(QGraphicsView):
         rospy.logdebug(' TimelineView set_range _min_num_seconds=%s max=%s',
                        self._min_num_seconds,
                        self._max_num_seconds)
-        self.set_xpos_marker(max_val)
 
-    def set_xpos_marker(self, len_queue):
-        """
-        Compare the given length with the current min & max possible pos on
-        timeline and sets the minimum/largest possible value.
-
-        :type len_queue: int
-        """
-
-        self._xpos_marker = self._clamp(int(len_queue),
+        # when setting the range, set the position to the end?
+        self._xpos_marker = self._clamp(len(self._timeline),
                                        self._min_num_seconds,
                                        self._max_num_seconds)
-        rospy.logdebug('TLView set_xpos_marker len_queue=%s xpos_marker=%s',
-                      len_queue, self._xpos_marker)
-
-    def get_xpos_marker(self):
-        return self._xpos_marker
 
     def mouseReleaseEvent(self, event):
         """
@@ -280,5 +267,4 @@ class TimelineView(QGraphicsView):
                 return util.level_to_color(status.level)
             else:
                 return QColor('grey')
-        # TODO: make this a public function in util
-        return util._get_color_for_message(msg)
+        return util.get_color_for_message(msg)

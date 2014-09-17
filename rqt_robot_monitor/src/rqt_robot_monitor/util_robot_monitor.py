@@ -113,14 +113,10 @@ def remove_parent_name(status_name):
 def get_parent_name(status_name):
     return ('/'.join(status_name.split('/')[:-1])).strip()
 
-def _get_color_for_message(msg, mode=0):
+def get_color_for_message(msg):
     """
-    :param msg: Either DiagnosticArray or DiagnosticsStatus.
-    :param mode: int. When 0, this func will iterate msg to find
-                 DiagnosticsStatus.level and put it into a dict.
-                 When 1, this func finds DiagnosticsStatus.level from msg
-                 without iteration (thus, msg is expected to be
-                 DiagnosticsStatus instance).
+    Get the overall (worst) color for a DiagnosticArray
+    :param msg: DiagnosticArray
     """
 
     level = 0
@@ -130,6 +126,7 @@ def _get_color_for_message(msg, mode=0):
     for status in msg.status:
         lookup[status.name] = status
 
+    # WHY?
     names = [status.name for status in msg.status]
     names = [name for name in names
              if len(get_parent_name(name)) == 0]
@@ -149,7 +146,6 @@ def _get_color_for_message(msg, mode=0):
 
 def get_correspondent(key, list_statitem):
     """
-
     :type key: String.
     :type list_statitem: DiagnosticsStatus
     :rtype: StatusItem
@@ -169,7 +165,6 @@ def get_correspondent(key, list_statitem):
 
 def get_children(name, diag_array):
     """
-
     :type msg: DiagnosticArray
     :rtype: DiagnosticStatus[]
     """
