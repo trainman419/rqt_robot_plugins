@@ -55,7 +55,7 @@ class RobotMonitorWidget(QWidget):
     when the instance of this class terminates.
 
     RobotMonitorWidget itself doesn't store previous diagnostic states.
-    It instead delegates that function to TimelinePane class.
+    It instead delegates that function to Timeline class.
     """
 
     _sig_tree_nodes_updated = Signal(int)
@@ -113,7 +113,6 @@ class RobotMonitorWidget(QWidget):
         self._sig_tree_nodes_updated.connect(self._tree_nodes_updated)
 
 
-        self._paused = False
         self._is_stale = True
         self._last_message_time = 0.0
 
@@ -153,6 +152,12 @@ class RobotMonitorWidget(QWidget):
         rospy.logdebug('RobotMonitorWidget resizeEvent')
         self.timeline_pane.redraw()
 
+    @Slot(str)
+    def _inspector_closed(self, name):
+        """ Called when an inspector window is closed """
+        if name in self._inspectors:
+            del self._inspectors[name]
+
     def _tree_clicked(self, item, column):
         """
         Slot to QTreeWidget.itemDoubleClicked
@@ -166,6 +171,7 @@ class RobotMonitorWidget(QWidget):
         else:
             self._inspectors[item.name] = InspectorWindow(self, item.name,
                     self._current_msg, self._timeline)
+            self._inspectors[item.name].closed.connect(self._inspector_closed)
 
     def _update_devices_tree(self, diag_array):
         """
@@ -285,24 +291,6 @@ class RobotMonitorWidget(QWidget):
         """
 
         self._update_flat_tree(diag_array)
-
-    def pause(self, msg):
-        """
-        Do nothing if already being _paused.
-
-        :type msg: DiagnosticArray
-        """
-
-        if not self._paused:
-            self._paused = True
-            #self.new_diagnostic(msg)
-
-    def unpause(self, msg=None):
-        """
-        :type msg: DiagnosticArray
-        """
-
-        self._paused = False
 
     def _update_flat_tree(self, diag_arr):
         """
@@ -497,6 +485,10 @@ class RobotMonitorWidget(QWidget):
             item.close()
         for item in self._toplevel_statitems:
             item.close()
+
+        names = self._inspectors.keys()
+        for name in names:
+            self._inspectors[name].close()
 
         self._timeline.shutdown()
 

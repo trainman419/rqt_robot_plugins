@@ -44,9 +44,9 @@ from diagnostic_msgs.msg import DiagnosticArray
 
 
 class InspectorWindow(QWidget):
-    _sig_close_window = Signal()
+    closed = Signal(str)
 
-    def __init__(self, parent, name, status, timeline, close_callback=None):
+    def __init__(self, parent, name, status, timeline):
         """
         :type status: DiagnosticStatus
         :param close_callback: When the instance of this class
@@ -78,9 +78,6 @@ class InspectorWindow(QWidget):
 
         self.snaps = []
 
-        if close_callback is not None:
-            self._sig_close_window.connect(close_callback)
-
         self.setLayout(self.layout_vertical)
         # TODO better to be configurable where to appear.
         self.resize(400, 600)
@@ -88,11 +85,14 @@ class InspectorWindow(QWidget):
         self.message_updated(status)
 
     def closeEvent(self, event):
-        # emit signal that should be slotted by StatusItem
+        """ called when this window is closed
+
+        Calls close on all snapshots, and emits the closed signal
+        """
         for snap in self.snaps:
             snap.close()
-        self._sig_close_window.emit()
-        self.close()
+        self.closed.emit(self._name)
+        #self.close()
 
     @Slot(DiagnosticArray)
     def message_updated(self, msg):
