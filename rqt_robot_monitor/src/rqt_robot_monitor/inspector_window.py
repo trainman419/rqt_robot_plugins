@@ -64,18 +64,19 @@ class InspectorWindow(QWidget):
         self.layout_vertical = QVBoxLayout(self)
 
         self.disp = StatusSnapshot(parent=self)
-        self.snapshot = QPushButton("Snapshot")
-
-        self.timeline_pane = TimelinePane(self)
-        if timeline is not None:
-            self.timeline_pane.set_timeline(timeline, name)
 
         self.layout_vertical.addWidget(self.disp, 1)
-        self.layout_vertical.addWidget(self.timeline_pane, 0)
-        self.layout_vertical.addWidget(self.snapshot)
+
+        if timeline is not None:
+            self.timeline_pane = TimelinePane(self)
+            self.timeline_pane.set_timeline(timeline, name)
+            self.layout_vertical.addWidget(self.timeline_pane, 0)
+
+            self.snapshot = QPushButton("Snapshot")
+            self.snapshot.clicked.connect(self._take_snapshot)
+            self.layout_vertical.addWidget(self.snapshot)
 
         self.snaps = []
-        self.snapshot.clicked.connect(self._take_snapshot)
 
         if close_callback is not None:
             self._sig_close_window.connect(close_callback)
@@ -92,33 +93,6 @@ class InspectorWindow(QWidget):
             snap.close()
         self._sig_close_window.emit()
         self.close()
-
-    def pause(self, msg):
-        rospy.logdebug('InspectorWin pause PAUSED')
-        self.paused = True
-        self.update_status_display(msg)
-
-    def unpause(self, msg):
-        rospy.logdebug('InspectorWin pause UN-PAUSED')
-        self.paused = False
-
-    def update_status_display(self, status, is_forced=False):
-        """
-        :type status: DiagnosticsStatus
-        """
-
-        if not self.paused or (self.paused and is_forced):
-            scroll_value = self.disp.verticalScrollBar().value()
-            self.timeline_pane.new_diagnostic(status)
-
-            rospy.logdebug('InspectorWin update_status_display 1')
-
-            self.status = status
-            self.disp.write_status.emit(status)
-
-            if self.disp.verticalScrollBar().maximum() < scroll_value:
-                scroll_value = self.disp.verticalScrollBar().maximum()
-            self.disp.verticalScrollBar().setValue(scroll_value)
 
     @Slot(DiagnosticArray)
     def message_updated(self, msg):
@@ -137,4 +111,3 @@ class InspectorWindow(QWidget):
     def _take_snapshot(self):
         snap = StatusSnapshot(status=self.status)
         self.snaps.append(snap)
-
