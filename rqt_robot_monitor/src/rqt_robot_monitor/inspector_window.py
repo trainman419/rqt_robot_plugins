@@ -37,7 +37,7 @@ from python_qt_binding.QtGui import QPushButton, QTextEdit, QVBoxLayout, QWidget
 import rospy
 
 from .status_snapshot import StatusSnapshot, level_to_text
-from .time_pane import TimelinePane
+from .timeline_pane import TimelinePane
 import util_robot_monitor as util
 
 from diagnostic_msgs.msg import DiagnosticArray

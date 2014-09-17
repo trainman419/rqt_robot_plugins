@@ -44,7 +44,7 @@ import rospy
 #from .chronologic_state import InstantaneousState
 from .inspector_window import InspectorWindow
 from .chronologic_state import StatusItem
-from .time_pane import TimelinePane
+from .timeline_pane import TimelinePane
 from .timeline import Timeline
 import util_robot_monitor as util
 
