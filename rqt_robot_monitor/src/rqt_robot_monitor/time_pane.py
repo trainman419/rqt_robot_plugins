@@ -81,15 +81,12 @@ class TimelinePane(QWidget):
         ui_file = os.path.join(rp.get_path('rqt_robot_monitor'),
                                'resource',
                                'timelinepane.ui')
-        #loadUi(ui_file, self, {'TimelineView': TimelineView})
         loadUi(ui_file, self)
 
         self._scene = QGraphicsScene(self._timeline_view)
         self._timeline_view.set_init_data(1, SECONDS_TIMELINE, 5)
         self._timeline_view.setScene(self._scene)
         self._timeline_view.show()
-
-        self._pause_button.clicked[bool].connect(self._pause)
 
         self.sig_update.connect(self._timeline_view.slot_redraw)
 
@@ -98,6 +95,13 @@ class TimelinePane(QWidget):
         self._timeline = timeline
         self._timeline.message_updated.connect(self.updated)
         self._timeline_view.set_timeline(timeline, name)
+        self._pause_button.clicked[bool].connect(self._timeline.set_paused)
+        self._timeline.pause_changed[bool].connect(
+                self._pause_button.setChecked)
+
+        # bootstrap initial state
+        self._pause_button.setChecked(self._timeline.paused)
+        self.sig_update.emit()
 
     def mouse_release(self, event):
         """
@@ -113,24 +117,6 @@ class TimelinePane(QWidget):
                        i, width_each_cell_shown)
 
         self._timeline.set_position(i)
-
-    def _pause(self, paused):
-        """
-        Should be the only interface for pausing timeline pane and timeline
-        itself (which is not as of now..).
-
-        :type paused: bool
-        """
-        rospy.logdebug('TimelinePane pause isPaused?=%s', paused)
-
-        if paused:
-            self._pause_button.setDown(True)
-            if self._timeline is not None:
-                self._timeline.pause()
-        else:
-            self._pause_button.setDown(False)
-            if self._timeline is not None:
-                self._timeline.unpause()
 
     def on_slider_scroll(self, evt):
         """
@@ -151,14 +137,11 @@ class TimelinePane(QWidget):
 
         self._last_sec_marker_at = xpos_marker
 
-        self._pause(True)
+        self._timeline.set_paused(True)
 
         # Fetch corresponding previous DiagsnoticArray instance from queue,
         # and sig_update trees.
         self._timeline.set_position(xpos_marker)
-
-    def new_diagnostic(self, msg):
-        pass
 
     @Slot()
     def updated(self):
@@ -167,7 +150,6 @@ class TimelinePane(QWidget):
         """
         assert(self._timeline is not None)
         self._timeline_view.set_range(1, len(self._timeline))
-
         self.sig_update.emit()
 
     def redraw(self):

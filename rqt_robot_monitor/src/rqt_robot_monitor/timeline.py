@@ -33,7 +33,7 @@
 # Author: Austin Hendrix
 
 from collections import deque
-from python_qt_binding.QtCore import Signal, QObject
+from python_qt_binding.QtCore import Signal, Slot, QObject
 
 import rospy
 
@@ -68,29 +68,19 @@ class Timeline(QObject):
     def shutdown(self):
         self._subscriber.unregister()
 
-    # TODO: there are too many pause/unpause functions. clean it up
-    def pause(self):
-        if self.paused:
-            return
-        self._paused_queue = deque(self._queue, self._queue.maxlen)
-        self.pause_changed.emit(True)
+    @Slot(bool)
+    def set_paused(self, pause):
+        if pause != self.paused:
+            if pause:
+                self._paused_queue = deque(self._queue, self._queue.maxlen)
+            else:
+                self._queue = self._paused_queue
+                self._paused_queue = None
 
-    def unpause(self):
-        if not self.paused:
-            return
-        self._queue = self._paused_queue
-        self._paused_queue = None
-
-        # update pointer to latest message and emit message_updated signal
-        self._current_index = -1
-        self.message_updated.emit(self._queue[self._current_index])
-        self.pause_changed.emit(False)
-
-    def toggle_paused(self):
-        if self.paused:
-            self.unpause()
-        else:
-            self.pause()
+                # update pointer to latest message
+                self._current_index = -1
+                self.message_updated.emit(self._queue[self._current_index])
+            self.pause_changed.emit(pause)
 
     @property
     def paused(self):
