@@ -59,7 +59,6 @@ class InspectorWindow(QWidget):
         super(InspectorWindow, self).__init__()
         self.setWindowTitle(name)
         self._name = name
-        self.paused = False
 
         self.layout_vertical = QVBoxLayout(self)
 
@@ -89,10 +88,12 @@ class InspectorWindow(QWidget):
 
         Calls close on all snapshots, and emits the closed signal
         """
+        # TODO: are snapshots kept around even after they're closed?
+        #       this appears to work even if the user closes some snapshots,
+        #       and they're still left in the internal array
         for snap in self.snaps:
             snap.close()
         self.closed.emit(self._name)
-        #self.close()
 
     @Slot(DiagnosticArray)
     def message_updated(self, msg):

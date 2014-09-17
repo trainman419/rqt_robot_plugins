@@ -56,24 +56,12 @@ class StatusItem(QTreeWidgetItem):
         self.name = status.name
         self.level = status.level
         self.last_level = None
-        self.inspector = None
         self.status = status  # DiagnosticsStatus
-
-        self.warning_id = None
-        self.error_id = None
 
         self.setText(0, '/' + util.get_resource_name(self.name))
 
     def get_name(self):
         return self.name
-
-    def enable(self):
-        if self.inspector:
-            self.inspector.enable()
-
-    def disable(self):
-        if self.inspector:
-            self.inspector.disable()
 
     def update(self, status):
         """
@@ -94,9 +82,6 @@ class StatusItem(QTreeWidgetItem):
         """
 
         self.status = status_new
-
-        if self.inspector:
-            self.inspector.update_status_display(self.status)
 
         children_diag_statuses = util.get_children(self.name, diag_array)
 
@@ -139,28 +124,8 @@ class StatusItem(QTreeWidgetItem):
         return {util._DICTKEY_TIMES_ERROR: errors,
                 util._DICTKEY_TIMES_WARN: warnings}
 
-    def close_inspector_window(self):
-        rospy.logdebug(' ------ Statusitem close_inspector_window 1')
-        self.inspector = None
-
     def strip_child(self, child):
         return child.replace(self.name, '')
-
-    def close(self):
-        """
-        Because Isaac failed to find a way to call a destructor of a class in
-        python in general, he made this function, intending it to be called by
-        its parent object (in this case RobotMonitorWidget's instance)
-        every timeline when a certain node gets removed.
-        """
-        if self.inspector:
-            # del self.inspector # This doesn't _close the window
-            self.inspector.close()
-
-        # _close children.
-        for status_item in self._children_statusitems:
-            status_item.close()
-
 
 class State(object):
     """

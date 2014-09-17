@@ -205,12 +205,6 @@ class RobotMonitorWidget(QWidget):
 
                 base_text = util.get_resource_name(statusitem.status.name)
 
-                rospy.logdebug('_update_devices_tree warn_id= %s\n\t\t\t' +
-                               'diagnostic_status.name = %s\n\t\t\t\t' +
-                               'Normal status diag_array = %s',
-                               statusitem.warning_id,
-                               status_new.name, base_text)
-
                 if (times_errors > 0 or times_warnings > 0):
                     base_text = "(Err: %s, Wrn: %s) %s %s" % (
                                    times_errors,
@@ -330,12 +324,10 @@ class RobotMonitorWidget(QWidget):
                     statitem_curr = self._get_statitem(dev_index_warn_curr,
                                                        self._warn_statusitems,
                                                        self.warn_flattree, 1)
-                    statitem_curr.warning_id = None
                 elif 0 <= dev_index_err_curr:
                     statitem_curr = self._get_statitem(dev_index_err_curr,
                                                        self._err_statusitems,
                                                        self.err_flattree, 1)
-                    statitem_curr.error_id = None
             elif DiagnosticStatus.WARN == stat_lv_new:
                 statitem = None
                 if 0 <= dev_index_err_curr:
@@ -476,15 +468,6 @@ class RobotMonitorWidget(QWidget):
         """
 
         rospy.logdebug('RobotMonitorWidget in shutdown')
-        # Close all StatusItem (and each associated InspectWidget)
-        # self.tree_all_devices.clear()  # Doesn't work for the purpose
-                                        # (inspector windows don't get closed)
-        for item in self._err_statusitems:
-            item.close()
-        for item in self._warn_statusitems:
-            item.close()
-        for item in self._toplevel_statitems:
-            item.close()
 
         names = self._inspectors.keys()
         for name in names:
