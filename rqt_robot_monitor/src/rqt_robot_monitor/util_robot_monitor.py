@@ -107,9 +107,6 @@ def get_resource_name(status_name):
     rospy.logdebug(' get_resource_name name = %s', name)
     return name
 
-def remove_parent_name(status_name):
-    return ('/'.join(status_name.split('/')[2:])).strip()
-
 def get_parent_name(status_name):
     return ('/'.join(status_name.split('/')[:-1])).strip()
 
