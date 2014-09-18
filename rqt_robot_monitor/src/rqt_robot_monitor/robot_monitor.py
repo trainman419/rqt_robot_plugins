@@ -48,26 +48,33 @@ from .timeline_pane import TimelinePane
 from .timeline import Timeline
 import util_robot_monitor as util
 
-class Status(object):
+class Status(QTreeWidgetItem):
     def __init__(self):
         super(Status, self).__init__()
         self._children = {}
         self.item = None
+
+    def update(self, status):
+        self.name = util.get_resource_name(status.name)
+        self.setText(0, self.name)
+        self.setIcon(0, util.level_to_icon(status.level))
+        self.setText(1, status.message)
 
     def __getitem__(self, key):
         return self._children[key]
 
     def __setitem__(self, key, value):
         self._children[key] = value
+        self.addChild(value)
 
     def __contains__(self, key):
         return key in self._children
 
     def __str__(self):
         if len(self._children) > 0:
-            return "%s (%s)" % ( self.message, str(self._children) )
+            return "%s (%s)" % ( self.item, str(self._children) )
         else:
-            return self.message
+            return str(self.item)
 
     def __repr__(self):
         return self.__str__()
@@ -75,15 +82,6 @@ class Status(object):
     def __iter__(self):
         for key in self._children:
             yield key
-
-def TreeStatusItem(QTreeWidgetItem):
-    def __init__(self, status):
-        super(TreeStatusItem, self).__init__(QTreeWidgetItem.UserType)
-        name = util.get_resource_name(status.name)
-        statusitem.setText(0, name)
-        statusitem.setText(1, status.message)
-        statusitem.setIcon(0, util.level_to_icon(status.level))
-
 
 class RobotMonitorWidget(QWidget):
     """
@@ -167,7 +165,7 @@ class RobotMonitorWidget(QWidget):
         # How should this ACTUALLY work?
 
         # Walk the status array and build a tree data structure
-        tree = Status()
+        tree = {}
         for status in msg.status:
             path = status.name.split('/')
             if path[0] == '':
@@ -177,8 +175,9 @@ class RobotMonitorWidget(QWidget):
                 if not p in tmp_tree:
                     tmp_tree[p] = Status()
                 tmp_tree = tmp_tree[p]
-            assert(tmp_tree.item is None)
-            tmp_tree.item = TreeStatusItem(status)
+            tmp_tree.update(status)
+
+        #print tree
 
         # Clear out the trees
         self.tree_all_devices.clear()
@@ -187,10 +186,9 @@ class RobotMonitorWidget(QWidget):
         #  additionally, add any warnings to the warnings tree
         #  and any errors to the errors tree
         for item in tree:
-            print item
-            if tree[item].item is not None:
-                print item
-                self.tree_all_devices.addTopLevelItem(tree[item].item)
+            self.tree_all_devices.addTopLevelItem(tree[item])
+
+        self.tree_all_devices.resizeColumnToContents(0)
 
         #self._update_devices_tree(msg)
         #self._update_warns_errors(msg)
