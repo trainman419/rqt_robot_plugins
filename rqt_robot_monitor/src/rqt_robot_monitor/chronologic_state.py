@@ -73,14 +73,12 @@ class StatusItem(QTreeWidgetItem):
 
     def update_children(self, status_new, diag_array):
         """
-
         Recursive for tree node's children.
         Update text on treeWidgetItem, set icon on it.
 
         :type status: DiagnosticStatus
         :type msg: DiagnosticArray
         """
-
         self.status = status_new
 
         children_diag_statuses = util.get_children(self.name, diag_array)

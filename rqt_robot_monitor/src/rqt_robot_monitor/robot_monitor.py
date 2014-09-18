@@ -38,7 +38,7 @@ import rospkg
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import QTimer, Signal, Qt, Slot
-from python_qt_binding.QtGui import QColor, QPalette, QWidget
+from python_qt_binding.QtGui import QColor, QPalette, QWidget, QTreeWidgetItem
 import rospy
 
 #from .chronologic_state import InstantaneousState
@@ -47,6 +47,42 @@ from .chronologic_state import StatusItem
 from .timeline_pane import TimelinePane
 from .timeline import Timeline
 import util_robot_monitor as util
+
+class Status(object):
+    def __init__(self):
+        super(Status, self).__init__()
+        self._children = {}
+        self.item = None
+
+    def __getitem__(self, key):
+        return self._children[key]
+
+    def __setitem__(self, key, value):
+        self._children[key] = value
+
+    def __contains__(self, key):
+        return key in self._children
+
+    def __str__(self):
+        if len(self._children) > 0:
+            return "%s (%s)" % ( self.message, str(self._children) )
+        else:
+            return self.message
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __iter__(self):
+        for key in self._children:
+            yield key
+
+def TreeStatusItem(QTreeWidgetItem):
+    def __init__(self, status):
+        super(TreeStatusItem, self).__init__(QTreeWidgetItem.UserType)
+        name = util.get_resource_name(status.name)
+        statusitem.setText(0, name)
+        statusitem.setText(1, status.message)
+        statusitem.setIcon(0, util.level_to_icon(status.level))
 
 
 class RobotMonitorWidget(QWidget):
@@ -127,25 +163,37 @@ class RobotMonitorWidget(QWidget):
     @Slot(DiagnosticArray)
     def message_cb(self, msg):
         self._current_msg = msg
-        self._update_devices_tree(msg)
-        self._update_warns_errors(msg)
 
-    def _notify_statitems(self, diag_arr):
-        """
-        Notify new message arrival to all existing InespectorWindow instances
-        that are encapsulated in StatusItem instances contained in
-        self._toplevel_statitems.
-        """
+        # How should this ACTUALLY work?
 
-        for statitem_new in diag_arr.status:
-            corresp = util.get_correspondent(statitem_new.name,
-                                             self._toplevel_statitems)
-            statitem_prev = corresp[util._DICTKEY_STATITEM]
-            if statitem_prev and statitem_prev.inspector:
-                rospy.logdebug('  RobotMonitorWidget _notify_statitems ' +
-                               'name=%s len toplv items=%d',
-                              statitem_new.name, len(self._toplevel_statitems))
-                return
+        # Walk the status array and build a tree data structure
+        tree = Status()
+        for status in msg.status:
+            path = status.name.split('/')
+            if path[0] == '':
+                path = path[1:]
+            tmp_tree = tree
+            for p in path:
+                if not p in tmp_tree:
+                    tmp_tree[p] = Status()
+                tmp_tree = tmp_tree[p]
+            assert(tmp_tree.item is None)
+            tmp_tree.item = TreeStatusItem(status)
+
+        # Clear out the trees
+        self.tree_all_devices.clear()
+
+        # Walk the tree and create the main tree
+        #  additionally, add any warnings to the warnings tree
+        #  and any errors to the errors tree
+        for item in tree:
+            print item
+            if tree[item].item is not None:
+                print item
+                self.tree_all_devices.addTopLevelItem(tree[item].item)
+
+        #self._update_devices_tree(msg)
+        #self._update_warns_errors(msg)
 
     def resizeEvent(self, evt):
         """Overridden from QWidget"""
@@ -392,7 +440,9 @@ class RobotMonitorWidget(QWidget):
 
     def _add_statitem(self, statusitem, statitem_list,
                       tree, headline, statusmsg, statlevel):
-
+        """
+        Setup a status item and add it as a toplevel item in the given tree
+        """
         if 'Warning' == statusmsg or 'Error' == statusmsg:
             return
 
@@ -406,6 +456,8 @@ class RobotMonitorWidget(QWidget):
 
     def _get_statitem(self, item_index, item_list, tree=None, mode=2):
         """
+        Get a status item; optionally removing it from the tree
+
         :param mode: 1 = remove from given list, 2 = w/o removing.
         """
         statitem_existing = item_list[item_index]
@@ -414,17 +466,9 @@ class RobotMonitorWidget(QWidget):
             item_list.pop(item_index)
         return statitem_existing
 
-    def _on_new_message_received(self, msg):
-        """
-        Called whenever a new message is received by the timeline.
-        Different from new_message in that it is called even if the timeline is
-        _paused, and only when a new message is received, not when the timeline
-        is scrubbed
-        """
-        self._last_message_time = rospy.get_time()
-
     def _update_message_state(self):
-
+        """ Update the display if it's stale """
+        # TODO(ahendrix): push staleness detection down into the Timeline
         current_time = rospy.get_time()
         time_diff = current_time - self._last_message_time
         rospy.logdebug('_update_message_state time_diff= %s ' +
@@ -449,6 +493,7 @@ class RobotMonitorWidget(QWidget):
             self._update_background_color()
 
     def _update_background_color(self):
+        """ Update the background color based on staleness """
         p = self.tree_all_devices.palette()
         if self._is_stale:
             p.setColor(QPalette.Base, Qt.darkGray)
@@ -466,7 +511,6 @@ class RobotMonitorWidget(QWidget):
         This closes all the instances on all trees.
         Also unregisters ROS' subscriber, stops timer.
         """
-
         rospy.logdebug('RobotMonitorWidget in shutdown')
 
         names = self._inspectors.keys()
