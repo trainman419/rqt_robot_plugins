@@ -69,7 +69,7 @@ class TimelinePane(QWidget):
 
         self._timeline_view.show()
 
-        self.sig_update.connect(self._timeline_view.slot_redraw)
+        self.sig_update.connect(self._timeline_view.redraw)
 
     def set_timeline(self, timeline, name=None):
         assert(self._timeline is None)

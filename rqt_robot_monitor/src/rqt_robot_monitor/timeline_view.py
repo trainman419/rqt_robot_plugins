@@ -52,7 +52,7 @@ class TimelineView(QGraphicsView):
     set necessary data.
     """
 
-    _redraw = Signal()
+    redraw = Signal()
 
     def __init__(self, parent):
         """Cannot take args other than parent due to loadUi limitation."""
@@ -69,7 +69,7 @@ class TimelineView(QGraphicsView):
         self._timeline_marker_height = 15
         self._last_marker_at = 2
 
-        self._redraw.connect(self.slot_redraw)
+        self.redraw.connect(self._slot_redraw)
 
         self._timeline = None
 
@@ -81,90 +81,84 @@ class TimelineView(QGraphicsView):
         assert(self._timeline is None)
         self._name = name
         self._timeline = timeline
-        self._timeline.message_updated.connect(self.updated)
+        self._timeline.message_updated.connect(self._updated)
 
     @Slot()
-    def updated(self):
+    def _updated(self):
+        """
+        Update the widget whenever we receive a new message
+        """
+        # update the limits
         self._min = 0
         self._max = len(self._timeline)-1
 
+        # update the marker position
         self._xpos_marker = self._timeline.get_position()
 
-        self._redraw.emit()
+        # redraw
+        self.redraw.emit()
 
     def mouseReleaseEvent(self, event):
         """
         :type event: QMouseEvent
         """
-        assert(self._timeline is not None)
+        xpos = self.pos_from_x(event.x())
+        self.set_marker_pos(xpos)
 
-        xpos_clicked = event.x()
-        width_each_cell_shown = float(self.viewport().width()) / len(self._timeline)
-        i = int(floor(xpos_clicked / width_each_cell_shown))
-        rospy.loginfo('mouse_release i=%d width_each_cell_shown=%s',
-                       i, width_each_cell_shown)
-
-        self._timeline.set_position(i)
-
-        self.set_val_from_x(event.pos().x())
-
-        # TODO Figure out what's done by this in wx.
-        # I suspect this reads the scroll wheel
-        # wx.PostEvent(self.GetEventHandler(),
-        #             wx.PyCommandEvent(wx.EVT_COMMAND_SCROLL_CHANGED.typeId,
-        #                               self.GetId()))
-
-    def mousePressEvent(self, evt):
+    def mousePressEvent(self, event):
         """
         :type event: QMouseEvent
         """
         assert(self._timeline is not None)
-        self.set_val_from_x(evt.pos().x())
+        # Pause the timeline
+        self._timeline.set_paused(True)
 
-        # TODO Figure out what's done by this in wx.
-        # I suspect this reads the scroll wheel
-        # wx.PostEvent(self.GetEventHandler(),
-        #             wx.PyCommandEvent(wx.EVT_COMMAND_SCROLL_THUMBTRACK.typeId
-        #                               self.GetId()))
+        xpos = self.pos_from_x(event.x())
+        self.set_marker_pos(xpos)
 
-        xpos_marker = self._xpos_marker - 1
-        rospy.loginfo('on_slider_scroll xpos_marker=%s last_sec_marker_at=%s',
-                      xpos_marker, self._last_marker_at)
-        if xpos_marker == self._last_marker_at:
+    def mouseMoveEvent(self, event):
+        """
+        :type event: QMouseEvent
+        """
+        xpos = self.pos_from_x(event.x())
+        self.set_marker_pos(xpos)
+
+    def pos_from_x(self, x):
+        """
+        Get the index in the timeline from the mouse click position
+
+        :param x: Position relative to self widget.
+        :return: Index
+        """
+        width = self.size().width()
+        # determine value from mouse click
+        width_cell = width / float(len(self._timeline))
+        return int(floor(x / width_cell))
+
+    def set_marker_pos(self, xpos):
+        """
+        Set marker position from index
+
+        :param xpos: Marker index
+        """
+        assert(self._timeline is not None)
+        self._xpos_marker = self._clamp(xpos, self._min, self._max)
+
+        if self._xpos_marker == self._last_marker_at:
             # Clicked the same pos as last time.
             return
-        elif xpos_marker >= len(self._timeline):
+        elif self._xpos_marker >= len(self._timeline):
             # When clicked out-of-region
             return
 
-        self._last_marker_at = xpos_marker
+        self._last_marker_at = self._xpos_marker
 
-        self._timeline.set_paused(True)
+        # Set timeline position. This broadcasts the message at that position
+        # to all of the other viewers
+        self._timeline.set_position(self._xpos_marker)
 
-        # Fetch corresponding previous DiagsnoticArray instance from queue,
-        # and redraw trees.
-        self._timeline.set_position(xpos_marker)
-
-
-    def set_val_from_x(self, x):
-        """
-        Called when marker is moved by user.
-
-        :param x: Position relative to self widget.
-        """
-        qsize = self.size()
-        width = qsize.width()
-        # determine value from mouse click
-        width_cell = width / float(len(self._timeline))
-        x_marker_float = x / width_cell + 1
-        self.set_marker_pos(x_marker_float)
-        rospy.loginfo('TimelineView set_val_from_x x=%s width_cell=%s ' +
-                      'length_tl_in_second=%s set_marker_pos=%s',
-                      x, width_cell, length_tl_in_second, self._xpos_marker)
-
-    def set_marker_pos(self, val):
-        self._xpos_marker = self._clamp(int(val), self._min, self._max)
-        self._redraw.emit()
+        # redraw
+        self.redraw.emit()
 
     def _clamp(self, val, min, max):
         """
@@ -183,12 +177,11 @@ class TimelineView(QGraphicsView):
         return val
 
     @Slot()
-    def slot_redraw(self):
+    def _slot_redraw(self):
         """
         Gets called either when new msg comes in or when marker is moved by
         user.
         """
-
         self._scene.clear()
 
         qsize = self.size()
@@ -204,20 +197,17 @@ class TimelineView(QGraphicsView):
                 # Figure out each cell's color.
                 qcolor = QColor('grey')
                 if is_enabled:
-                    qcolor = self.get_color_for_value(m)
+                    qcolor = self._get_color_for_value(m)
 
 #  TODO Use this code for adding gradation to the cell color.
 #                end_color = QColor(0.5 * QColor('red').value(),
 #                                   0.5 * QColor('green').value(),
 #                                   0.5 * QColor('blue').value())
 
-                self._scene.addRect(w * i, 0, w, h,
-                                                   QColor('white'), qcolor)
-                rospy.logdebug('slot_redraw #%d th loop w=%s width_tl=%s',
-                               i, w, width_tl)
+                self._scene.addRect(w * i, 0, w, h, QColor('white'), qcolor)
 
         # Setting marker.
-        xpos_marker = ((self._xpos_marker - 1) * w +
+        xpos_marker = (self._xpos_marker * w +
                        (w / 2.0) - (self._timeline_marker_width / 2.0))
         pos_marker = QPointF(xpos_marker, 0)
 
@@ -234,7 +224,7 @@ class TimelineView(QGraphicsView):
                                                 self._timeline_marker_height)
         return QGraphicsPixmapItem(timeline_marker_icon_pixmap)
 
-    def get_color_for_value(self, msg):
+    def _get_color_for_value(self, msg):
         """
         :type msg: DiagnosticArray
         """
