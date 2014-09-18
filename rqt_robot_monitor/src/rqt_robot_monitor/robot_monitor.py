@@ -52,11 +52,12 @@ class Status(QTreeWidgetItem):
     def __init__(self):
         super(Status, self).__init__()
         self._children = {}
-        self.item = None
+        self.name = "NONAME"
 
     def update(self, status):
-        self.name = util.get_resource_name(status.name)
-        self.setText(0, self.name)
+        self.name = status.name
+        self.displayname = util.get_resource_name(status.name)
+        self.setText(0, self.displayname)
         self.setIcon(0, util.level_to_icon(status.level))
         self.setText(1, status.message)
 
@@ -158,14 +159,16 @@ class RobotMonitorWidget(QWidget):
         self._original_base_color = palette.base().color()
         self._original_alt_base_color = palette.alternateBase().color()
 
+        self._tree = {}
+
     @Slot(DiagnosticArray)
     def message_cb(self, msg):
         self._current_msg = msg
 
         # How should this ACTUALLY work?
 
-        # Walk the status array and build a tree data structure
-        tree = {}
+        # Walk the status array and update the tree
+        tree = self._tree
         for status in msg.status:
             path = status.name.split('/')
             if path[0] == '':
@@ -177,16 +180,20 @@ class RobotMonitorWidget(QWidget):
                 tmp_tree = tmp_tree[p]
             tmp_tree.update(status)
 
-        #print tree
-
-        # Clear out the trees
-        self.tree_all_devices.clear()
+        # For any items in the tree that were not updated, remove them
 
         # Walk the tree and create the main tree
         #  additionally, add any warnings to the warnings tree
         #  and any errors to the errors tree
         for item in tree:
             self.tree_all_devices.addTopLevelItem(tree[item])
+
+        # Insight: for any item that is not OK, it only provides additional
+        #          information if all of it's children are OK
+        #
+        #          otherwise, it's just an aggregation of its children
+        #          and doesn't provide any additional value when added to
+        #          the warning and error flat trees
 
         self.tree_all_devices.resizeColumnToContents(0)
 
