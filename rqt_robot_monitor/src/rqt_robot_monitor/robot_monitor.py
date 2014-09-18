@@ -53,13 +53,26 @@ class Status(QTreeWidgetItem):
         super(Status, self).__init__()
         self._children = {}
         self.name = "NONAME"
+        self.updated = False
 
     def update(self, status):
+        self.updated = True
         self.name = status.name
         self.displayname = util.get_resource_name(status.name)
         self.setText(0, self.displayname)
         self.setIcon(0, util.level_to_icon(status.level))
         self.setText(1, status.message)
+
+    def prune(self):
+        stale = []
+        for child in self._children:
+            if not self._children[child].updated:
+                stale.append(child)
+            else:
+                self._children[child].prune()
+        self.updated = False
+        if len(stale) > 0:
+            print "Pruning:", stale
 
     def __getitem__(self, key):
         return self._children[key]
@@ -159,7 +172,8 @@ class RobotMonitorWidget(QWidget):
         self._original_base_color = palette.base().color()
         self._original_alt_base_color = palette.alternateBase().color()
 
-        self._tree = {}
+        self._tree = Status()
+        self.tree_all_devices.addTopLevelItem(self._tree)
 
     @Slot(DiagnosticArray)
     def message_cb(self, msg):
@@ -186,7 +200,7 @@ class RobotMonitorWidget(QWidget):
         #  additionally, add any warnings to the warnings tree
         #  and any errors to the errors tree
         for item in tree:
-            self.tree_all_devices.addTopLevelItem(tree[item])
+            tree[item].prune()
 
         # Insight: for any item that is not OK, it only provides additional
         #          information if all of it's children are OK
