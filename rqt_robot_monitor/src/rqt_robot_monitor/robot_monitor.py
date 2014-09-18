@@ -70,9 +70,11 @@ class Status(QTreeWidgetItem):
                 stale.append(child)
             else:
                 self._children[child].prune()
-        self.updated = False
         if len(stale) > 0:
-            print "Pruning:", stale
+            for child in stale:
+                self.removeChild(self._children[child])
+                del self._children[child]
+        self.updated = False
 
     def __getitem__(self, key):
         return self._children[key]
