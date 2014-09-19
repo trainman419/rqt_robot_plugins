@@ -33,7 +33,6 @@
 # Author: Isaac Saito, Ze'ev Klapow
 
 from qt_gui.plugin import Plugin
-import rospy
 
 from .robot_monitor import RobotMonitorWidget
 
@@ -58,7 +57,6 @@ class RobotMonitorPlugin(Plugin):
 
         Overriding Plugin's method.
         """
-        rospy.logdebug('In RobotMonitorPlugin shutdown_plugin')
         self._robot_monitor.shutdown()  # Closes unclosed popup windows.
 
     def save_settings(self, plugin_settings, instance_settings):

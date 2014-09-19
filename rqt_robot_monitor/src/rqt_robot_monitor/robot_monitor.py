@@ -56,7 +56,6 @@ class RobotMonitorWidget(QWidget):
     It instead delegates that function to Timeline class.
     """
 
-    _sig_tree_nodes_updated = Signal(int)
     _TREE_ALL = 1
     _TREE_WARN = 2
     _TREE_ERR = 3
@@ -80,11 +79,8 @@ class RobotMonitorWidget(QWidget):
         self.setObjectName(obj_name)
         self.setWindowTitle(obj_name)
 
-        self._toplevel_statitems = []  # StatusItem
-        self._warn_statusitems = []  # StatusItem. Contains ALL DEGREES
-                                # (device top level, device' _sub) in parallel
-        self._err_statusitems = []  # StatusItem
-
+        # if we're given a topic, create a timeline. otherwise, don't
+        #  this can be used later when writing an rqt_bag plugin
         if topic:
             self._timeline = Timeline(topic, DiagnosticArray)
             self._timeline.message_updated.connect(self.message_updated)
@@ -101,18 +97,12 @@ class RobotMonitorWidget(QWidget):
         # keep a copy of the current message for opening new inspectors
         self._current_msg = None
 
-
         self.tree_all_devices.itemDoubleClicked.connect(self._tree_clicked)
         self.warn_flattree.itemDoubleClicked.connect(self._tree_clicked)
         self.err_flattree.itemDoubleClicked.connect(self._tree_clicked)
+        # TODO: resize on itemCollapsed and itemExpanded
 
-        self.tree_all_devices.resizeColumnToContents(0)
-
-        self._sig_tree_nodes_updated.connect(self._tree_nodes_updated)
-
-
-        self._is_stale = True
-        self._last_message_time = 0.0
+        self._is_stale = False
 
         self._timer = QTimer()
         self._timer.timeout.connect(self._update_message_state)
@@ -194,37 +184,6 @@ class RobotMonitorWidget(QWidget):
             self._inspectors[item.name] = InspectorWindow(self, item.name,
                     self._current_msg, self._timeline)
             self._inspectors[item.name].closed.connect(self._inspector_closed)
-
-
-    def _tree_nodes_updated(self, tree_type):
-        tree_obj = None
-        if self._TREE_ALL == tree_type:
-            tree_obj = self.tree_all_devices
-        elif self._TREE_WARN == tree_type:
-            tree_obj = self.warn_flattree
-        if self._TREE_ERR == tree_type:
-            tree_obj = self.err_flattree
-        tree_obj.resizeColumnToContents(0)
-
-    def _get_toplevel_diagnosticstat(self, diag_array):
-        """
-        Return an array that contains DiagnosticStatus only at the top level of
-        the given msg.
-
-        :type msg: DiagnosticArray
-        :rtype: DiagnosticStatus[]
-        """
-
-        ret = []
-        for diagnostic_status in diag_array.status:
-            if len(diagnostic_status.name.split('/')) == 2:
-                rospy.logdebug(" _get_toplevel_diagnosticstat " +
-                "TOP lev %s ", diagnostic_status.name)
-                ret.append(diagnostic_status)
-            else:
-                rospy.logdebug(" _get_toplevel_diagnosticstat " +
-                               "Not top lev %s ", diagnostic_status.name)
-        return ret
 
     def _update_message_state(self):
         """ Update the display if it's stale """

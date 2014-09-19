@@ -44,10 +44,6 @@ class Timeline(QObject):
     A class which represents the status history of diagnostics
     It can be queried for a past history of diagnostics, and paused
     """
-    # TODO: Should it also allow "views" by device subtree to support timeline views
-    #       in inspector windows?
-    # or just support fetching by index and subtree
-
     message_updated = Signal(DiagnosticArray)
     pause_changed = Signal(bool)
 
@@ -69,10 +65,20 @@ class Timeline(QObject):
                                             queue_size=10)
 
     def shutdown(self):
+        """
+        Turn off this Timeline
+        Internally, this just shuts down the subscriber
+        """
         self._subscriber.unregister()
 
     @Slot(bool)
     def set_paused(self, pause):
+        """
+        Slot, to be called to change the pause status of the timeline
+
+        This is generally intended to be connected to the status signal
+        from a button or checkbox
+        """
         if pause != self.paused:
             if pause:
                 self._paused_queue = deque(self._queue, self._queue.maxlen)
@@ -87,13 +93,14 @@ class Timeline(QObject):
 
     @property
     def paused(self):
+        """ True if this timeline is paused """
         return self._paused_queue is not None
 
     def callback(self, msg):
         """
-        Callback for new msg
+        ROS Callback for new diagnostic messages
 
-        Puts new msg into the queue, and emit a signal to let listeners know
+        Puts new msg into the queue, and emits a signal to let listeners know
         that the timeline has been updated
 
         If the timeline is paused, new messages are placed into a separate
@@ -112,15 +119,21 @@ class Timeline(QObject):
 
     @property
     def has_messages(self):
+        """
+        True if this timeline has received any messages.
+        False if no messages have been received yet
+        """
         return self._have_messages
 
     def data_age(self):
+        """ Get the age (in seconds) of the most recent diagnostic message """
         current_time = rospy.get_time()
         time_diff = current_time - self._last_message_time
         return time_diff
 
     @property
     def is_stale(self):
+        """ True is this timeline is stale. """
         return self.data_age() > 10.0
         
     def set_position(self, index):

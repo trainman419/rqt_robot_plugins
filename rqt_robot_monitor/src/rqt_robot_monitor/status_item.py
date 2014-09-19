@@ -36,6 +36,11 @@ from python_qt_binding.QtGui import QTreeWidgetItem
 import util_robot_monitor as util
 
 class _StatusItem(QTreeWidgetItem):
+    """
+    Internal subclass of QTreeWidgetItem which adds a 'name' member to make
+    it easier to extract the item name and create an inspector when an item
+    is clicked
+    """
     def __init__(self, name):
         super(_StatusItem, self).__init__()
         self.name = name

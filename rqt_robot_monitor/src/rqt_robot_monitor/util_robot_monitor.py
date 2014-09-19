@@ -73,28 +73,6 @@ def level_to_text(level):
     else:
         return "UNKNOWN(%d)" % ( level )
 
-_DICTKEY_TIMES_ERROR = 'times_errors'
-_DICTKEY_TIMES_WARN = 'times_warnings'
-_DICTKEY_INDEX = 'index'
-_DICTKEY_STATITEM = 'statitem'
-
-def update_status_images(diagnostic_status, statusitem):
-    """
-    Taken from robot_monitor.robot_monitor_panel.py.
-
-    :type status: DiagnosticStatus
-    :type node: StatusItem
-    :author: Isaac Saito
-    """
-
-    name = diagnostic_status.name
-    if (name is not None):
-        level = diagnostic_status.level
-        if (diagnostic_status.level != statusitem.last_level):
-            statusitem.setIcon(0, level_to_icon(level))
-            statusitem.last_level = level
-            return
-
 def get_resource_name(status_name):
     """
     Get resource name from path
@@ -107,28 +85,16 @@ def get_resource_name(status_name):
     rospy.logdebug(' get_resource_name name = %s', name)
     return name
 
-def get_parent_name(status_name):
-    return ('/'.join(status_name.split('/')[:-1])).strip()
-
 def get_color_for_message(msg):
     """
     Get the overall (worst) color for a DiagnosticArray
     :param msg: DiagnosticArray
     """
-
     level = 0
     min_level = 255
 
     lookup = {}
     for status in msg.status:
-        lookup[status.name] = status
-
-    # WHY?
-    names = [status.name for status in msg.status]
-    names = [name for name in names
-             if len(get_parent_name(name)) == 0]
-    for name in names:
-        status = lookup[name]
         if (status.level > level):
             level = status.level
         if (status.level < min_level):
@@ -140,40 +106,6 @@ def get_color_for_message(msg):
 
     rospy.logdebug(' get_color_for_message color lv=%d', level)
     return level_to_color(level)
-
-def get_correspondent(key, list_statitem):
-    """
-    :type key: String.
-    :type list_statitem: DiagnosticsStatus
-    :rtype: StatusItem
-    """
-    names_from_list = [get_resource_name(status.name)
-                       for status in list_statitem]
-    key_niced = get_resource_name(key)
-    index_key = -1
-    statitem_key = None
-    if key_niced in names_from_list:
-        index_key = names_from_list.index(key_niced)
-        statitem_key = list_statitem[index_key]
-        rospy.logdebug(' get_correspondent index_key=%s statitem_key=%s',
-                      index_key, statitem_key)
-    return {_DICTKEY_INDEX: index_key,
-            _DICTKEY_STATITEM: statitem_key}
-
-def get_children(name, diag_array):
-    """
-    :type msg: DiagnosticArray
-    :rtype: DiagnosticStatus[]
-    """
-
-    ret = []
-    for k in diag_array.status:  # k is DiagnosticStatus.
-        if k.name.startswith(name):  # Starting with self.name means k
-                                    # is either top/parent node / its child
-            if not k.name == name:  # Child's name must be different
-                                        # from that of the top/parent node.
-                ret.append(k)
-    return ret
 
 def get_status_by_name(msg, name):
     for status in msg.status:
