@@ -62,6 +62,9 @@ class Timeline(QObject):
         # new history are not lost
         self._paused_queue = None
 
+        self._have_messages = False
+        self._last_message_time = 0
+
         self._subscriber = rospy.Subscriber(topic, topic_type, self.callback,
                                             queue_size=10)
 
@@ -99,12 +102,27 @@ class Timeline(QObject):
         :type msg: Either DiagnosticArray or DiagnosticsStatus. Can be
                    determined by __init__'s arg "msg_callback".
         """
+        self._have_messages = True
+        self._last_message_time = rospy.get_time()
         if self.paused:
             self._paused_queue.append(msg)
         else:
             self._queue.append(msg)
             self.message_updated.emit(msg)
 
+    @property
+    def has_messages(self):
+        return self._have_messages
+
+    def data_age(self):
+        current_time = rospy.get_time()
+        time_diff = current_time - self._last_message_time
+        return time_diff
+
+    @property
+    def is_stale(self):
+        return self.data_age() > 10.0
+        
     def set_position(self, index):
         max_index = len(self._queue) - 1
         min_index = -len(self._queue)

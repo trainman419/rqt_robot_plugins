@@ -38,68 +38,14 @@ import rospkg
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
 from python_qt_binding import loadUi
 from python_qt_binding.QtCore import QTimer, Signal, Qt, Slot
-from python_qt_binding.QtGui import QColor, QPalette, QWidget, QTreeWidgetItem
+from python_qt_binding.QtGui import QPalette, QWidget
 import rospy
 
-#from .chronologic_state import InstantaneousState
 from .inspector_window import InspectorWindow
-from .chronologic_state import StatusItem
+from .status_item import StatusItem
 from .timeline_pane import TimelinePane
 from .timeline import Timeline
 import util_robot_monitor as util
-
-class MyStatusItem(QTreeWidgetItem):
-    def __init__(self, name):
-        super(MyStatusItem, self).__init__()
-        self.name = name
-
-class Status(object):
-    """
-    A class that wraps the default QTreeWidgetItem, so that we can manipulate
-    all of the nodes in the tree in the same way (even the invisible root node)
-    """
-    def __init__(self, item=None):
-        self._children = {}
-        self.updated = False
-        if item is not None:
-            self._item = item
-        else:
-            self._item = MyStatusItem("NONAME")
-
-    def update(self, status, displayname):
-        self.updated = True
-        self.displayname = displayname
-        self._item.name = status.name
-        self._item.setText(0, self.displayname)
-        self._item.setIcon(0, util.level_to_icon(status.level))
-        self._item.setText(1, status.message)
-
-    def prune(self):
-        stale = []
-        for child in self._children:
-            if not self._children[child].updated:
-                stale.append(child)
-            else:
-                self._children[child].prune()
-        if len(stale) > 0:
-            for child in stale:
-                self._item.removeChild(self._children[child]._item)
-                del self._children[child]
-        self.updated = False
-
-    def __getitem__(self, key):
-        return self._children[key]
-
-    def __setitem__(self, key, value):
-        self._children[key] = value
-        self._item.addChild(value._item)
-
-    def __contains__(self, key):
-        return key in self._children
-
-    def __iter__(self):
-        for key in self._children:
-            yield key
 
 class RobotMonitorWidget(QWidget):
     """
@@ -176,12 +122,13 @@ class RobotMonitorWidget(QWidget):
         self._original_base_color = palette.base().color()
         self._original_alt_base_color = palette.alternateBase().color()
 
-        self._tree = Status(self.tree_all_devices.invisibleRootItem())
-        self._warn_tree = Status(self.warn_flattree.invisibleRootItem())
-        self._err_tree = Status(self.err_flattree.invisibleRootItem())
+        self._tree = StatusItem(self.tree_all_devices.invisibleRootItem())
+        self._warn_tree = StatusItem(self.warn_flattree.invisibleRootItem())
+        self._err_tree = StatusItem(self.err_flattree.invisibleRootItem())
 
     @Slot(DiagnosticArray)
     def message_cb(self, msg):
+        """ DiagnosticArray message callback """
         self._current_msg = msg
 
         # Walk the status array and update the tree
@@ -192,23 +139,17 @@ class RobotMonitorWidget(QWidget):
                 path = path[1:]
             tmp_tree = self._tree
             for p in path:
-                if not p in tmp_tree:
-                    tmp_tree[p] = Status()
                 tmp_tree = tmp_tree[p]
             tmp_tree.update(status, util.get_resource_name(status.name))
 
             # Check for warnings
             if status.level == DiagnosticStatus.WARN:
                 name = status.name
-                if not name in self._warn_tree:
-                    self._warn_tree[name] = Status()
                 self._warn_tree[name].update(status, status.name)
 
             # Check for errors
             if status.level == DiagnosticStatus.ERROR:
                 name = status.name
-                if not name in self._err_tree:
-                    self._err_tree[name] = Status()
                 self._err_tree[name].update(status, status.name)
 
         # For any items in the tree that were not updated, remove them
@@ -287,29 +228,24 @@ class RobotMonitorWidget(QWidget):
 
     def _update_message_state(self):
         """ Update the display if it's stale """
-        # TODO(ahendrix): push staleness detection down into the Timeline
-        current_time = rospy.get_time()
-        time_diff = current_time - self._last_message_time
-        rospy.logdebug('_update_message_state time_diff= %s ' +
-                       'self._last_message_time=%s', time_diff,
-                       self._last_message_time)
+        if self._timeline is not None:
+            if self._timeline.has_messages:
+                previous_stale_state = self._is_stale
+                self._is_stale = self._timeline.is_stale
 
-        previous_stale_state = self._is_stale
-        if (time_diff > 10.0):
-            self.timeline_pane._msg_label.setText("Last message received " +
-                                               "%s seconds ago"
-                                               % (int(time_diff)))
-            self._is_stale = True
-        else:
-            seconds_string = "seconds"
-            if (int(time_diff) == 1):
-                seconds_string = "second"
-            self.timeline_pane._msg_label.setText(
-                 "Last message received %s %s ago" % (int(time_diff),
-                                                      seconds_string))
-            self._is_stale = False
-        if previous_stale_state != self._is_stale:
-            self._update_background_color()
+                time_diff = int(self._timeline.data_age())
+
+                msg_template = "Last message received %s %s ago"
+                if time_diff == 1:
+                    msg = msg_template % (time_diff, "second")
+                else:
+                    msg = msg_template % (time_diff, "seconds")
+                self.timeline_pane._msg_label.setText(msg)
+                if previous_stale_state != self._is_stale:
+                    self._update_background_color()
+            else:
+                # no messages received yet
+                self.timeline_pane._msg_label.setText("No messages received")
 
     def _update_background_color(self):
         """ Update the background color based on staleness """
