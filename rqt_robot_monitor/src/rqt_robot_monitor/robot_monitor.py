@@ -66,9 +66,9 @@ class Status(object):
         else:
             self._item = MyStatusItem("NONAME")
 
-    def update(self, status):
+    def update(self, status, displayname):
         self.updated = True
-        self.displayname = util.get_resource_name(status.name)
+        self.displayname = displayname
         self._item.name = status.name
         self._item.setText(0, self.displayname)
         self._item.setIcon(0, util.level_to_icon(status.level))
@@ -177,36 +177,44 @@ class RobotMonitorWidget(QWidget):
         self._original_alt_base_color = palette.alternateBase().color()
 
         self._tree = Status(self.tree_all_devices.invisibleRootItem())
-        #self.tree_all_devices.addTopLevelItem(self._tree)
-        #self.tree_all_devices.setRootIndex(self._tree)
+        self._warn_tree = Status(self.warn_flattree.invisibleRootItem())
+        self._err_tree = Status(self.err_flattree.invisibleRootItem())
 
     @Slot(DiagnosticArray)
     def message_cb(self, msg):
         self._current_msg = msg
 
-        # How should this ACTUALLY work?
-
         # Walk the status array and update the tree
-        tree = self._tree
         for status in msg.status:
+            # Compute path and walk to appropriate subtree
             path = status.name.split('/')
             if path[0] == '':
                 path = path[1:]
-            tmp_tree = tree
+            tmp_tree = self._tree
             for p in path:
                 if not p in tmp_tree:
                     tmp_tree[p] = Status()
                 tmp_tree = tmp_tree[p]
-            tmp_tree.update(status)
+            tmp_tree.update(status, util.get_resource_name(status.name))
+
+            # Check for warnings
+            if status.level == DiagnosticStatus.WARN:
+                name = status.name
+                if not name in self._warn_tree:
+                    self._warn_tree[name] = Status()
+                self._warn_tree[name].update(status, status.name)
+
+            # Check for errors
+            if status.level == DiagnosticStatus.ERROR:
+                name = status.name
+                if not name in self._err_tree:
+                    self._err_tree[name] = Status()
+                self._err_tree[name].update(status, status.name)
 
         # For any items in the tree that were not updated, remove them
-
-        # Walk the tree and create the main tree
-        #  additionally, add any warnings to the warnings tree
-        #  and any errors to the errors tree
-        tree.prune()
-        #for item in tree:
-        #    tree[item].prune()
+        self._tree.prune()
+        self._warn_tree.prune()
+        self._err_tree.prune()
 
         # Insight: for any item that is not OK, it only provides additional
         #          information if all of it's children are OK
@@ -216,9 +224,8 @@ class RobotMonitorWidget(QWidget):
         #          the warning and error flat trees
 
         self.tree_all_devices.resizeColumnToContents(0)
-
-        #self._update_devices_tree(msg)
-        #self._update_warns_errors(msg)
+        self.warn_flattree.resizeColumnToContents(0)
+        self.err_flattree.resizeColumnToContents(0)
 
     def resizeEvent(self, evt):
         """Overridden from QWidget"""
