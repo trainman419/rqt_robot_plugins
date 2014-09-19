@@ -48,20 +48,31 @@ from .timeline_pane import TimelinePane
 from .timeline import Timeline
 import util_robot_monitor as util
 
-class Status(QTreeWidgetItem):
-    def __init__(self):
-        super(Status, self).__init__()
+class MyStatusItem(QTreeWidgetItem):
+    def __init__(self, name):
+        super(MyStatusItem, self).__init__()
+        self.name = name
+
+class Status(object):
+    """
+    A class that wraps the default QTreeWidgetItem, so that we can manipulate
+    all of the nodes in the tree in the same way (even the invisible root node)
+    """
+    def __init__(self, item=None):
         self._children = {}
-        self.name = "NONAME"
         self.updated = False
+        if item is not None:
+            self._item = item
+        else:
+            self._item = MyStatusItem("NONAME")
 
     def update(self, status):
         self.updated = True
-        self.name = status.name
         self.displayname = util.get_resource_name(status.name)
-        self.setText(0, self.displayname)
-        self.setIcon(0, util.level_to_icon(status.level))
-        self.setText(1, status.message)
+        self._item.name = status.name
+        self._item.setText(0, self.displayname)
+        self._item.setIcon(0, util.level_to_icon(status.level))
+        self._item.setText(1, status.message)
 
     def prune(self):
         stale = []
@@ -72,7 +83,7 @@ class Status(QTreeWidgetItem):
                 self._children[child].prune()
         if len(stale) > 0:
             for child in stale:
-                self.removeChild(self._children[child])
+                self._item.removeChild(self._children[child]._item)
                 del self._children[child]
         self.updated = False
 
@@ -81,19 +92,10 @@ class Status(QTreeWidgetItem):
 
     def __setitem__(self, key, value):
         self._children[key] = value
-        self.addChild(value)
+        self._item.addChild(value._item)
 
     def __contains__(self, key):
         return key in self._children
-
-    def __str__(self):
-        if len(self._children) > 0:
-            return "%s (%s)" % ( self.item, str(self._children) )
-        else:
-            return str(self.item)
-
-    def __repr__(self):
-        return self.__str__()
 
     def __iter__(self):
         for key in self._children:
@@ -174,8 +176,9 @@ class RobotMonitorWidget(QWidget):
         self._original_base_color = palette.base().color()
         self._original_alt_base_color = palette.alternateBase().color()
 
-        self._tree = Status()
-        self.tree_all_devices.addTopLevelItem(self._tree)
+        self._tree = Status(self.tree_all_devices.invisibleRootItem())
+        #self.tree_all_devices.addTopLevelItem(self._tree)
+        #self.tree_all_devices.setRootIndex(self._tree)
 
     @Slot(DiagnosticArray)
     def message_cb(self, msg):
@@ -201,8 +204,9 @@ class RobotMonitorWidget(QWidget):
         # Walk the tree and create the main tree
         #  additionally, add any warnings to the warnings tree
         #  and any errors to the errors tree
-        for item in tree:
-            tree[item].prune()
+        tree.prune()
+        #for item in tree:
+        #    tree[item].prune()
 
         # Insight: for any item that is not OK, it only provides additional
         #          information if all of it's children are OK
